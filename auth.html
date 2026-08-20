@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Sign in or create a CollegeTab planning workspace." />
+  <title>CollegeTab — Enter Workspace</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Mono:wght@300;400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="design-system.css" />
+  <link rel="stylesheet" href="auth.css" />
+</head>
+<body>
+  <div class="auth-field" aria-hidden="true"></div>
+  <header class="auth-header">
+    <a class="fl-brand" href="index.html"><span class="fl-brand__mark">CT</span><span class="fl-brand__word">COLLEGETAB</span></a>
+    <a href="index.html" class="fl-mono">← Back to site</a>
+  </header>
+
+  <main class="auth-main">
+    <section class="auth-message">
+      <span class="fl-mono">[ YOUR WORKSPACE ]</span>
+      <h1>THE PLAN<br>STARTS <em>HERE.</em></h1>
+      <p>Create a private place for college comparisons, assumptions and future scenarios. Nothing is pre-filled with someone else’s path.</p>
+      <div class="auth-note"><b>Prototype note</b><span>Authentication is visual only in this build. Your planning shell stores data locally in this browser until a real backend is connected.</span></div>
+    </section>
+
+    <section class="auth-panel" aria-labelledby="authTitle">
+      <div class="auth-tabs" role="tablist" aria-label="Account action">
+        <button type="button" class="is-active" role="tab" aria-selected="true" data-auth-tab="signup">Create account</button>
+        <button type="button" role="tab" aria-selected="false" data-auth-tab="signin">Sign in</button>
+      </div>
+      <form id="authForm" novalidate>
+        <span class="fl-mono" id="authKicker">New workspace</span>
+        <h2 id="authTitle">START FREE.</h2>
+        <label class="field-block"><span class="fl-label">Email</span><input class="fl-input" id="authEmail" type="email" autocomplete="email" placeholder="you@example.com" required></label>
+        <label class="field-block"><span class="fl-label">Password</span><input class="fl-input" id="authPassword" type="password" minlength="8" autocomplete="new-password" placeholder="8+ characters" required></label>
+        <label class="prototype-consent" id="termsRow"><input type="checkbox" id="termsCheck"><span>I understand this is a front-end prototype and no real account will be created.</span></label>
+        <button class="fl-button fl-button--blue auth-submit" type="submit"><span id="authButtonText">Enter planning workspace</span><span class="fl-button__arrow">→</span></button>
+        <p class="auth-error" id="authError" role="alert"></p>
+      </form>
+    </section>
+  </main>
+  <script src="auth.js"></script>
+</body>
+</html>

@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://collegetab.local/schema/college-record.schema.json",
+  "title": "CollegeTab canonical college record",
+  "type": "object",
+  "required": ["schemaVersion", "canonicalId", "unitId", "identifiers", "identity", "costs", "history", "provenance"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "canonicalId": { "type": "string", "pattern": "^ipeds:[0-9]+$" },
+    "unitId": { "type": "string", "pattern": "^[0-9]+$" },
+    "identifiers": {
+      "type": "object",
+      "required": ["ipedsUnitId"],
+      "properties": {
+        "ipedsUnitId": { "type": "string" },
+        "ope8Id": { "type": "string" },
+        "ope6Id": { "type": "string" }
+      }
+    },
+    "identity": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "city": { "type": "string" },
+        "state": { "type": "string" },
+        "ownershipCode": { "type": ["number", "null"] },
+        "ownership": { "type": "string" },
+        "schoolUrl": { "type": "string" },
+        "netPriceCalculatorUrl": { "type": "string" },
+        "predominantDegreeCode": { "type": ["number", "null"] }
+      }
+    },
+    "residency": {
+      "type": "object",
+      "properties": {
+        "institutionState": { "type": "string" },
+        "categoriesAvailable": { "type": "array", "items": { "enum": ["in_state", "out_of_state"] } },
+        "eligibilityPolicy": { "type": ["object", "null"] },
+        "note": { "type": "string" }
+      }
+    },
+    "costs": {
+      "type": "object",
+      "description": "Federal/base cost values. Each populated field is a sourced-value object.",
+      "additionalProperties": { "$ref": "#/$defs/sourcedValue" }
+    },
+    "publishedCosts": {
+      "type": ["object", "null"],
+      "description": "Optional verified school-published cost components retained separately from federal data."
+    },
+    "history": {
+      "type": "array",
+      "description": "Annual source observations used to derive historical growth."
+    },
+    "provenance": {
+      "type": "object",
+      "description": "Record-level source metadata and precedence rules."
+    }
+  },
+  "$defs": {
+    "sourcedValue": {
+      "type": "object",
+      "required": ["value", "source"],
+      "properties": {
+        "value": { "type": ["number", "null"], "minimum": 0 },
+        "source": {
+          "type": "object",
+          "required": ["provider", "dataset", "variable", "academicYear", "retrievedAt"],
+          "properties": {
+            "provider": { "type": "string" },
+            "dataset": { "type": "string" },
+            "variable": { "type": "string" },
+            "academicYear": { "type": "string" },
+            "releaseDate": { "type": "string" },
+            "retrievedAt": { "type": "string" },
+            "url": { "type": "string" },
+            "note": { "type": "string" }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,723 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="CollegeTab planning workspace." />
+  <title>CollegeTab — Planning Workspace</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Mono:wght@300;400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="design-system.css" />
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body class="app-page">
+  <div class="app-field" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+  <div class="cursor-dot" aria-hidden="true"></div>
+
+  <header class="mobile-header">
+    <a class="fl-brand" href="index.html" aria-label="CollegeTab home">
+      <span class="fl-brand__mark">CT</span>
+      <span class="fl-brand__word">COLLEGETAB</span>
+    </a>
+    <button class="mobile-menu-button" type="button" id="mobileMenuButton" aria-expanded="false" aria-controls="appRail">MENU</button>
+  </header>
+
+  <aside class="app-rail" id="appRail" aria-label="CollegeTab workspace navigation">
+    <div class="rail-head">
+      <a class="fl-brand" href="index.html" aria-label="CollegeTab home">
+        <span class="fl-brand__mark">CT</span>
+        <span class="fl-brand__word">COLLEGETAB</span>
+      </a>
+      <div class="rail-plan">
+        <span class="fl-mono">Current plan</span>
+        <button type="button" id="planNameButton"><strong id="railPlanName">Untitled plan</strong><span>↘</span></button>
+      </div>
+    </div>
+
+    <nav class="rail-nav" aria-label="Plan sections">
+      <div class="rail-group-label fl-mono">Journey</div>
+      <a href="#onboarding" data-route="onboarding"><span>01</span><strong>Setup</strong></a>
+      <a href="#colleges" data-route="colleges"><span>02</span><strong>College cost</strong></a>
+      <a href="#projection" data-route="projection"><span>03</span><strong>Career + loans</strong></a>
+      <a href="#budget" data-route="budget"><span>04</span><strong>Monthly budget</strong></a>
+      <a href="#savings" data-route="savings"><span>05</span><strong>Savings</strong></a>
+      <a href="#compare" data-route="compare"><span>06</span><strong>Compare</strong></a>
+      <div class="rail-group-label fl-mono">Workspace</div>
+      <a href="#overview" data-route="overview"><span>H</span><strong>Overview</strong></a>
+      <a href="#saved" data-route="saved"><span>S</span><strong>Saved plans</strong></a>
+      <a href="#account" data-route="account"><span>A</span><strong>Account</strong></a>
+      <a href="#billing" data-route="billing"><span>B</span><strong>Billing</strong></a>
+    </nav>
+
+    <div class="rail-foot">
+      <button class="fl-button fl-button--lime rail-new-plan" type="button" data-new-plan>
+        <span>New plan</span><span class="fl-button__arrow">＋</span>
+      </button>
+      <a href="index.html" class="rail-back fl-mono">← Marketing site</a>
+    </div>
+  </aside>
+
+  <main class="app-main">
+    <header class="workspace-topbar">
+      <div>
+        <span class="workspace-breadcrumb fl-mono">Workspace / <b id="workspaceSection">Overview</b></span>
+        <h1 id="workspaceTitle">Your financial decision, in one place.</h1>
+      </div>
+      <div class="workspace-actions">
+        <span class="save-status fl-mono" id="saveStatus"><i></i>Saved locally</span>
+        <button class="profile-button" type="button" data-route-button="account" aria-label="Open account settings">YOU</button>
+      </div>
+    </header>
+
+    <div class="workspace-views">
+      <section class="workspace-view is-active" data-view="overview" aria-labelledby="overviewHeading">
+        <div class="overview-hero">
+          <div class="overview-intro">
+            <span class="fl-mono view-index">[ 01 / START HERE ]</span>
+            <h2 id="overviewHeading">BUILD THE DECISION.<br><span>NOT JUST THE BUDGET.</span></h2>
+            <p>CollegeTab connects college cost, financing, career income, taxes, living costs and long-term wealth. Start with the facts you know. Every assumption stays editable.</p>
+            <button class="fl-button fl-button--blue" type="button" id="heroContinueButton" data-route-button="onboarding">
+              <span>Continue setup</span><span class="fl-button__arrow">→</span>
+            </button>
+          </div>
+          <div class="setup-meter fl-surface--lime">
+            <div class="setup-meter__top">
+              <span class="fl-mono">Workspace setup</span>
+              <strong id="readinessPercent">0%</strong>
+            </div>
+            <div class="setup-track"><span id="readinessBar"></span></div>
+            <ol class="setup-list">
+              <li data-readiness="profile"><span>01</span><strong>Setup</strong><em>Not started</em></li>
+              <li data-readiness="school"><span>02</span><strong>College cost</strong><em>Not started</em></li>
+              <li data-readiness="career"><span>03</span><strong>Career + loans</strong><em>Not started</em></li>
+              <li data-readiness="budget"><span>04</span><strong>Monthly budget</strong><em>Not started</em></li>
+              <li data-readiness="savings"><span>05</span><strong>Savings</strong><em>Not started</em></li>
+              <li data-readiness="compare"><span>06</span><strong>Compare</strong><em>Not started</em></li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="metric-strip" aria-label="Current plan summary">
+          <article><span class="fl-mono">Colleges</span><strong id="metricColleges">—</strong><small>Added to plan</small></article>
+          <article><span class="fl-mono">4-year cost</span><strong>—</strong><small>Calculated after cost data</small></article>
+          <article><span class="fl-mono">Debt at graduation</span><strong>—</strong><small>Calculated after funding</small></article>
+          <article><span class="fl-mono">Age-30 net worth</span><strong>—</strong><small>Calculated after projection</small></article>
+        </div>
+
+        <div class="overview-grid">
+          <article class="next-action fl-surface--coral">
+            <span class="fl-mono">Best next action</span>
+            <h3 id="nextActionTitle">Tell us what you’re planning.</h3>
+            <p id="nextActionCopy">A few neutral setup details give the workspace structure without locking you into assumptions.</p>
+            <button class="fl-button" type="button" id="nextActionButton" data-route-button="onboarding"><span>Start setup</span><span class="fl-button__arrow">↗</span></button>
+          </article>
+          <article class="principle-panel fl-surface--ink">
+            <span class="fl-mono">Model principle</span>
+            <blockquote>“Every important number should be editable, sourced, and explainable.”</blockquote>
+            <p>That is the standard the cost and projection engines will follow as they are added.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="workspace-view" data-view="onboarding" aria-labelledby="onboardingHeading">
+        <div class="view-heading">
+          <div>
+            <span class="fl-mono view-index">[ 01 / SETUP ]</span>
+            <h2 id="onboardingHeading">SET THE PLAN.<br><span>KEEP IT FLEXIBLE.</span></h2>
+          </div>
+          <p>No school, major, state, income or family assumption is filled in for you. These fields organize the model; they do not determine the outcome.</p>
+        </div>
+
+        <div class="onboarding-shell">
+          <aside class="onboarding-steps" aria-label="Onboarding progress">
+            <button type="button" class="is-active" data-onboarding-step="1"><span>01</span><strong>Plan basics</strong></button>
+            <button type="button" data-onboarding-step="2"><span>02</span><strong>Education timeline</strong></button>
+            <button type="button" data-onboarding-step="3"><span>03</span><strong>Priorities</strong></button>
+          </aside>
+          <form class="onboarding-form" id="onboardingForm">
+            <div class="onboarding-panel is-active" data-onboarding-panel="1">
+              <span class="fl-mono panel-kicker">Step 01 / Plan basics</span>
+              <h3>Who is this plan for?</h3>
+              <div class="choice-grid" role="radiogroup" aria-label="Planning role">
+                <label><input type="radio" name="role" value="student"><span><b>Student</b><small>I’m planning my own path.</small></span></label>
+                <label><input type="radio" name="role" value="family"><span><b>Family</b><small>We’re planning together.</small></span></label>
+                <label><input type="radio" name="role" value="advisor"><span><b>Advisor</b><small>I’m helping someone compare.</small></span></label>
+              </div>
+              <label class="field-block">
+                <span class="fl-label">Plan name</span>
+                <input class="fl-input" id="planNameInput" name="planName" type="text" maxlength="60" placeholder="e.g. College decision 2027" autocomplete="off">
+                <small class="fl-field-help">Use any label that will make this plan easy to recognize later.</small>
+              </label>
+            </div>
+
+            <div class="onboarding-panel" data-onboarding-panel="2">
+              <span class="fl-mono panel-kicker">Step 02 / Education timeline</span>
+              <h3>Give the model a time horizon.</h3>
+              <div class="field-pair">
+                <label class="field-block">
+                  <span class="fl-label">College start year</span>
+                  <input class="fl-input" id="startYearInput" name="startYear" type="number" min="2000" max="2100" step="1" placeholder="YYYY" inputmode="numeric">
+                </label>
+                <label class="field-block">
+                  <span class="fl-label">Expected years enrolled</span>
+                  <select class="fl-select" name="yearsEnrolled">
+                    <option value="">Select</option>
+                    <option value="1">1 year</option>
+                    <option value="2">2 years</option>
+                    <option value="3">3 years</option>
+                    <option value="4">4 years</option>
+                    <option value="5">5 years</option>
+                    <option value="6">6 years</option>
+                    <option value="7">7 years</option>
+                    <option value="8">8 years</option>
+                  </select>
+                </label>
+              </div>
+              <label class="field-block">
+                <span class="fl-label">Degree or program type</span>
+                <select class="fl-select" name="programType">
+                  <option value="">Select if known</option>
+                  <option value="associate">Associate degree</option>
+                  <option value="bachelor">Bachelor’s degree</option>
+                  <option value="certificate">Certificate / credential</option>
+                  <option value="other">Other / undecided</option>
+                </select>
+                <small class="fl-field-help">This will later control which cost and career assumptions are relevant.</small>
+              </label>
+            </div>
+
+            <div class="onboarding-panel" data-onboarding-panel="3">
+              <span class="fl-mono panel-kicker">Step 03 / Priorities</span>
+              <h3>What do you want the plan to answer?</h3>
+              <div class="priority-grid">
+                <label><input type="checkbox" name="priorities" value="cost"><span>Compare total college cost</span></label>
+                <label><input type="checkbox" name="priorities" value="debt"><span>Understand borrowing and payoff</span></label>
+                <label><input type="checkbox" name="priorities" value="income"><span>Estimate post-college take-home pay</span></label>
+                <label><input type="checkbox" name="priorities" value="wealth"><span>Project savings and net worth</span></label>
+              </div>
+              <div class="onboarding-note">
+                <strong>Nothing here changes the math.</strong>
+                <p>Priorities only change what CollegeTab surfaces first. The underlying model remains available in full.</p>
+              </div>
+            </div>
+
+            <div class="onboarding-actions">
+              <button class="fl-button fl-button--quiet" type="button" id="onboardingBack">← Back</button>
+              <span class="fl-mono" id="onboardingCounter">1 / 3</span>
+              <button class="fl-button fl-button--blue" type="button" id="onboardingNext"><span>Continue</span><span class="fl-button__arrow">→</span></button>
+              <button class="fl-button fl-button--lime" type="submit" id="onboardingFinish" hidden><span>Save setup</span><span class="fl-button__arrow">✓</span></button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section class="workspace-view" data-view="colleges" aria-labelledby="collegesHeading">
+        <div class="view-heading college-heading">
+          <div>
+            <span class="fl-mono view-index">[ 02 / COLLEGE COST ]</span>
+            <h2 id="collegesHeading">SEARCH IT.<br><span>PRICE IT.</span></h2>
+          </div>
+          <p>Search U.S. colleges by name, load federally reported cost data, then replace any number with the value that is actually true for your student.</p>
+        </div>
+
+        <div class="college-data-ribbon">
+          <div><span class="fl-mono">Canonical key</span><strong>IPEDS UNITID</strong></div>
+          <div><span class="fl-mono">Primary federal feed</span><strong>College Scorecard + IPEDS</strong></div>
+          <div><span class="fl-mono">Current Scorecard release</span><strong>June 10, 2026</strong></div>
+          <div><span class="fl-mono">Rule</span><strong>No invented splits</strong></div>
+        </div>
+
+        <section class="college-search-shell" aria-labelledby="collegeSearchLabel">
+          <label for="collegeSearchInput" id="collegeSearchLabel">
+            <span class="fl-mono">Search the U.S. college database</span>
+            <strong>TYPE A COLLEGE NAME.</strong>
+          </label>
+          <div class="college-search-input-wrap">
+            <input class="college-search-input" id="collegeSearchInput" type="search" autocomplete="off" spellcheck="false" placeholder="Search colleges and universities…" aria-controls="collegeSearchResults" aria-expanded="false">
+            <span class="college-search-state fl-mono" id="collegeSearchState">2+ characters</span>
+          </div>
+          <div class="college-search-results" id="collegeSearchResults" role="listbox" aria-label="College search results"></div>
+        </section>
+
+        <div class="school-search-bar shortlist-bar">
+          <div>
+            <span class="fl-mono">Your shortlist</span>
+            <strong id="collegeCountLabel">0 schools added</strong>
+          </div>
+          <span class="fl-mono shortlist-help">Select a school below to edit its cost model.</span>
+        </div>
+        <div class="school-list-shell" id="schoolList"></div>
+
+        <section class="college-cost-workspace" id="collegeCostWorkspace" hidden aria-labelledby="costWorkspaceHeading">
+          <header class="cost-workspace-head">
+            <div>
+              <span class="fl-mono" id="costWorkspaceMeta">IPEDS UNITID —</span>
+              <h3 id="costWorkspaceHeading">COLLEGE COST MODEL.</h3>
+              <p id="costWorkspaceLocation">Select a college to begin.</p>
+            </div>
+            <div class="cost-workspace-actions">
+              <span class="cost-data-status fl-status fl-status--good" id="costDataStatus">FEDERAL DATA LOADED</span>
+              <button class="fl-button fl-button--quiet" type="button" id="removeSelectedCollege">Remove school →</button>
+            </div>
+          </header>
+
+          <div class="cost-context-grid">
+            <label>
+              <span class="fl-label">Tuition residency</span>
+              <select class="fl-select" id="costResidency">
+                <option value="in_state">In-state / resident</option>
+                <option value="out_of_state">Out-of-state</option>
+              </select>
+              <small id="residencyHelp">Residency eligibility is school-specific. Federal Scorecard data supplies in-state/out-of-state prices; district-specific rates require a verified school source or override.</small>
+            </label>
+            <label>
+              <span class="fl-label">Living arrangement</span>
+              <select class="fl-select" id="costLiving">
+                <option value="oncampus">On campus</option>
+                <option value="offcampus">Off campus, not with family</option>
+                <option value="withfamily">With family</option>
+              </select>
+              <small>Changes the federal room/board and other-expense source used when available.</small>
+            </label>
+            <label>
+              <span class="fl-label">Expected years of attendance</span>
+              <select class="fl-select" id="costYears">
+                <option value="1">1 year</option><option value="2">2 years</option><option value="3">3 years</option><option value="4">4 years</option>
+                <option value="5">5 years</option><option value="6">6 years</option><option value="7">7 years</option><option value="8">8 years</option>
+              </select>
+              <small>Defaults to the plan timeline when available and can be changed per school.</small>
+            </label>
+          </div>
+
+          <div class="cost-integrity-note fl-notice">
+            <span class="fl-notice__label">Data integrity</span>
+            <p>IPEDS/College Scorecard often combines <b>tuition + required fees</b> and combines <b>transportation + personal/other expenses</b>. CollegeTab keeps those federal totals intact until both component overrides are supplied, so the math never depends on a fabricated split.</p>
+          </div>
+
+          <form class="cost-editor" id="collegeCostForm">
+            <div class="cost-editor-head"><span class="fl-mono">Annual cost inputs</span><strong>EVERY VALUE CAN BE OVERRIDDEN.</strong></div>
+
+            <div class="cost-line cost-line--source">
+              <div><span class="cost-line__index">01</span><strong>Federal tuition + required fees</strong><small id="tuitionCombinedSource">IPEDS via College Scorecard</small></div>
+              <output id="tuitionCombinedDisplay">—</output>
+              <span class="source-chip">SOURCE</span>
+            </div>
+            <div class="cost-split-grid">
+              <label class="cost-input-card"><span class="fl-label">Tuition override</span><div class="money-input"><span>$</span><input id="costTuition" name="tuition" type="number" min="0" max="250000" step="1" inputmode="numeric" placeholder="Leave blank to use federal combined total"></div><small>Enter only if you know tuition separately from required fees.</small></label>
+              <label class="cost-input-card"><span class="fl-label">Mandatory fees override</span><div class="money-input"><span>$</span><input id="costMandatoryFees" name="mandatoryFees" type="number" min="0" max="100000" step="1" inputmode="numeric" placeholder="Leave blank unless verified"></div><small>Tuition + fees overrides replace the federal combined figure only when both are entered.</small></label>
+            </div>
+
+            <div class="cost-line cost-line--editable">
+              <div><span class="cost-line__index">02</span><strong>Room and board</strong><small id="roomBoardSource">IPEDS source</small></div>
+              <div class="money-input"><span>$</span><input id="costRoomBoard" name="roomBoard" type="number" min="0" max="150000" step="1" inputmode="numeric"></div>
+              <button type="button" class="cost-reset" data-reset-cost="roomBoard">USE SOURCE</button>
+            </div>
+            <div class="cost-line cost-line--editable">
+              <div><span class="cost-line__index">03</span><strong>Books / supplies</strong><small id="booksSource">IPEDS source</small></div>
+              <div class="money-input"><span>$</span><input id="costBooks" name="booksSupplies" type="number" min="0" max="50000" step="1" inputmode="numeric"></div>
+              <button type="button" class="cost-reset" data-reset-cost="booksSupplies">USE SOURCE</button>
+            </div>
+
+            <div class="cost-line cost-line--source">
+              <div><span class="cost-line__index">04</span><strong>Federal other expenses</strong><small id="otherCombinedSource">Transportation + personal/other may be combined</small></div>
+              <output id="otherCombinedDisplay">—</output>
+              <span class="source-chip">SOURCE</span>
+            </div>
+            <div class="cost-split-grid">
+              <label class="cost-input-card"><span class="fl-label">Transportation override</span><div class="money-input"><span>$</span><input id="costTransportation" name="transportation" type="number" min="0" max="75000" step="1" inputmode="numeric" placeholder="Leave blank to preserve federal combined total"></div><small>Use the school’s published transportation allowance when available.</small></label>
+              <label class="cost-input-card"><span class="fl-label">Personal expenses override</span><div class="money-input"><span>$</span><input id="costPersonal" name="personalExpenses" type="number" min="0" max="75000" step="1" inputmode="numeric" placeholder="Leave blank to preserve federal combined total"></div><small>Both split fields must be entered before they replace the federal combined amount.</small></label>
+            </div>
+
+            <div class="cost-aid-band">
+              <label><span class="fl-label">Annual grants / scholarships</span><div class="money-input"><span>$</span><input id="costGrants" name="grantsScholarships" type="number" min="0" max="250000" step="1" inputmode="numeric" placeholder="0"></div><small>Your expected gift aid. Enter $0 if none is expected; no institution average is substituted for your actual aid.</small></label>
+              <label><span class="fl-label">Annual family contribution</span><div class="money-input"><span>$</span><input id="costFamily" name="familyContribution" type="number" min="0" max="250000" step="1" inputmode="numeric" placeholder="0"></div><small>Cash contribution toward college costs. Enter $0 if none is expected.</small></label>
+            </div>
+
+            <div class="growth-band">
+              <div>
+                <span class="fl-mono">Historical cost growth</span>
+                <strong id="historicalGrowthDisplay">—</strong>
+                <small id="historicalGrowthPeriod">Loading annual IPEDS history…</small>
+              </div>
+              <label><span class="fl-label">Projection growth rate override</span><div class="percent-input"><input id="costGrowthRate" name="growthRate" type="number" min="-10" max="25" step="0.1" inputmode="decimal" placeholder="Use observed rate"><span>% / yr</span></div><small>Blank uses the observed annualized growth rate when enough history exists.</small></label>
+            </div>
+          </form>
+
+          <div class="cost-output-grid" aria-label="College cost results">
+            <article class="cost-output cost-output--ink"><span class="fl-mono">Current annual cost model</span><strong id="annualCostOutput">—</strong><small id="annualCostNote">Requires complete selected cost inputs.</small></article>
+            <article class="cost-output cost-output--blue"><span class="fl-mono">Projected future cost</span><strong id="projectedCostOutput">—</strong><small id="projectedCostNote">Across expected attendance years.</small></article>
+            <article class="cost-output cost-output--lime"><span class="fl-mono">Grants + family funding</span><strong id="fundingOutput">—</strong><small id="fundingNote">Enter both values explicitly; use $0 when none is expected.</small></article>
+            <article class="cost-output cost-output--coral"><span class="fl-mono">Borrowing requirement</span><strong id="borrowingOutput">—</strong><small id="borrowingNote">Funding gap before loan interest or repayment modeling.</small></article>
+          </div>
+
+          <details class="source-ledger" id="sourceLedger">
+            <summary><span class="fl-mono">Source ledger</span><strong>SHOW WHERE EVERY FEDERAL NUMBER CAME FROM →</strong></summary>
+            <div id="sourceLedgerBody"></div>
+          </details>
+          <div class="step-forward-band fl-surface--coral">
+            <span class="fl-mono">STEP 02 COMPLETE?</span>
+            <strong>NEXT: CAREER + LOANS.</strong>
+            <button class="fl-button" type="button" id="collegeContinueButton" data-route-button="projection"><span>Continue to career + loans</span><span class="fl-button__arrow">→</span></button>
+          </div>
+        </section>
+      </section>
+
+      <section class="workspace-view" data-view="compare" aria-labelledby="compareHeading">
+        <div class="view-heading">
+          <div>
+            <span class="fl-mono view-index">[ 06 / COMPARE ]</span>
+            <h2 id="compareHeading">TWO PATHS.<br><span>ONE DECISION.</span></h2>
+          </div>
+          <p>Compare the full consequence of each college path—not just sticker price. Every result below is produced by the same standalone CollegeTab engine and can be traced back to its inputs.</p>
+        </div>
+
+        <div class="compare-picker" aria-label="Choose schools to compare">
+          <label><span class="fl-label">Left scenario</span><select class="fl-select" id="compareSelectA" aria-label="Left comparison school"></select></label>
+          <span class="compare-vs fl-mono">VS</span>
+          <label><span class="fl-label">Right scenario</span><select class="fl-select" id="compareSelectB" aria-label="Right comparison school"></select></label>
+        </div>
+
+        <div class="scenario-verdict" id="comparisonVerdict" aria-live="polite">
+          <span class="fl-mono">SCENARIO SIGNAL</span>
+          <strong>COMPLETE BOTH MODELS TO SEE THE LONG-RANGE DIFFERENCE.</strong>
+          <small>CollegeTab does not label a school “better.” It shows which assumptions drive cost, debt, take-home pay and modeled net worth.</small>
+        </div>
+
+        <div class="scenario-readiness-grid">
+          <article id="compareReadinessA"></article>
+          <article id="compareReadinessB"></article>
+        </div>
+
+        <div class="compare-shell compare-shell--scenario" aria-label="Scenario comparison metrics">
+          <div class="compare-row compare-row--head">
+            <span class="fl-mono">Metric</span>
+            <div id="compareHeadA"><b>School A</b><small>Add a college</small></div>
+            <div id="compareHeadB"><b>School B</b><small>Add a college</small></div>
+          </div>
+          <div class="compare-row"><span>Projected college cost</span><strong id="compareTotalCostA">—</strong><strong id="compareTotalCostB">—</strong></div>
+          <div class="compare-row"><span>Student debt at graduation</span><strong id="compareDebtA">—</strong><strong id="compareDebtB">—</strong></div>
+          <div class="compare-row"><span>Federal student debt</span><strong id="compareFederalDebtA">—</strong><strong id="compareFederalDebtB">—</strong></div>
+          <div class="compare-row"><span>Private student debt</span><strong id="comparePrivateDebtA">—</strong><strong id="comparePrivateDebtB">—</strong></div>
+          <div class="compare-row"><span>Parent PLUS debt</span><strong id="compareParentDebtA">—</strong><strong id="compareParentDebtB">—</strong></div>
+          <div class="compare-row"><span>Expected starting salary</span><strong id="compareSalaryA">—</strong><strong id="compareSalaryB">—</strong></div>
+          <div class="compare-row"><span>First-year monthly take-home</span><strong id="compareTakeHomeA">—</strong><strong id="compareTakeHomeB">—</strong></div>
+          <div class="compare-row"><span>Student loan minimum once repayment is active</span><strong id="compareLoanPaymentA">—</strong><strong id="compareLoanPaymentB">—</strong></div>
+          <div class="compare-row"><span>Debt-free age</span><strong id="compareDebtFreeA">—</strong><strong id="compareDebtFreeB">—</strong></div>
+          <div class="compare-row compare-row--result"><span id="compareNetWorthLabel">Net worth at target age</span><strong id="compareNetWorthA">—</strong><strong id="compareNetWorthB">—</strong></div>
+          <div class="compare-row"><span id="compareFamilyOpportunityLabel">Family contribution future value at target age</span><strong id="compareFamilyOpportunityA">—</strong><strong id="compareFamilyOpportunityB">—</strong></div>
+        </div>
+        <div class="compare-foot compare-foot--scenario">
+          <p><b>Important:</b> the net-worth difference is a modeled financial consequence under the assumptions entered—not a ranking of academic quality, fit, or life outcomes. State tax is a planning estimate and future tax law is unknowable.</p>
+          <button class="fl-button fl-button--lime" type="button" id="editScenarioButton"><span>Edit scenario assumptions</span><span class="fl-button__arrow">→</span></button>
+        </div>
+      </section>
+
+      <section class="workspace-view" data-view="projection" aria-labelledby="projectionHeading">
+        <div class="view-heading">
+          <div>
+            <span class="fl-mono view-index">[ 03 / CAREER + LOANS ]</span>
+            <h2 id="projectionHeading">MODEL THE LIFE<br><span>AFTER COLLEGE.</span></h2>
+          </div>
+          <p>College cost, debt, salary, taxes, living expenses, emergency savings and investing are calculated in one reproducible model. Change an assumption, rerun it, and the model ID changes with the inputs.</p>
+        </div>
+
+        <div class="projection-school-bar">
+          <div><span class="fl-mono">SCENARIO TO MODEL</span><strong>Choose a college path.</strong></div>
+          <select class="fl-select" id="projectionSchoolSelect" aria-label="College scenario to model"></select>
+        </div>
+
+        <div class="projection-assumption-grid">
+          <form class="assumption-panel assumption-panel--ink" id="projectionSharedForm">
+            <div class="assumption-panel__head"><span class="fl-mono">01 / SHARED MODEL</span><h3>TIME + GROWTH</h3><p>These assumptions apply to every college in this plan so comparisons stay apples-to-apples. Pre-filled values are editable planning defaults, not predictions.</p></div>
+            <div class="assumption-fields">
+              <label><span class="fl-label">Graduation age</span><input class="fl-input" name="graduationAge" type="number" min="16" max="80" step="1" placeholder="Required"></label>
+              <label><span class="fl-label">Target age</span><input class="fl-input" name="targetAge" type="number" min="17" max="100" step="1"></label>
+              <label><span class="fl-label">Tax filing status</span><select class="fl-select" name="filingStatus"><option value="">Choose status</option><option value="single">Single</option><option value="married_joint">Married filing jointly</option></select><small>For married filing jointly, this scenario currently treats the modeled salary as the household's only wage income. Use Single unless that assumption fits.</small></label>
+              <label><span class="fl-label">Salary growth / yr</span><div class="suffix-input"><input class="fl-input" name="salaryGrowthRate" type="number" min="-50" max="50" step="0.1"><span>%</span></div></label>
+              <label><span class="fl-label">General inflation / yr</span><div class="suffix-input"><input class="fl-input" name="inflationRate" type="number" min="0" max="20" step="0.1"><span>%</span></div></label>
+              <label><span class="fl-label">Employee retirement</span><div class="suffix-input"><input class="fl-input" name="retirementRate" type="number" min="0" max="100" step="0.5"><span>%</span></div></label>
+              <label><span class="fl-label">Employer retirement contribution</span><div class="suffix-input"><input class="fl-input" name="employerContributionRate" type="number" min="0" max="100" step="0.5"><span>%</span></div><small>Modeled as a flat contribution rate and capped by applicable qualified-plan limits.</small></label>
+              <label><span class="fl-label">Investment return / yr</span><div class="suffix-input"><input class="fl-input" name="investmentReturnRate" type="number" min="-50" max="100" step="0.1"><span>%</span></div><small>Nominal scenario return; not guaranteed.</small></label>
+              <label><span class="fl-label">Emergency reserve target</span><div class="suffix-input"><input class="fl-input" name="emergencyMonths" type="number" min="0" max="24" step="0.5"><span>MO</span></div></label>
+            </div>
+            <details class="assumption-advanced"><summary>Opening balances + model notes →</summary><div class="assumption-fields assumption-fields--advanced">
+              <label><span class="fl-label">Starting emergency savings</span><input class="fl-input" name="startingEmergencySavings" type="number" min="0" max="10000000" step="100"></label>
+              <label><span class="fl-label">Starting taxable investments</span><input class="fl-input" name="startingInvestments" type="number" min="0" max="10000000" step="100"></label>
+              <label><span class="fl-label">Starting retirement balance</span><input class="fl-input" name="startingRetirement" type="number" min="0" max="10000000" step="100"></label>
+            </div><p>Future federal and state tax thresholds are projected from the 2026 baseline using the general inflation assumption. That is a planning convention—not a prediction of future legislation.</p></details>
+            <button class="fl-button fl-button--lime" type="submit"><span>Save shared assumptions</span><span class="fl-button__arrow">✓</span></button>
+          </form>
+
+          <form class="assumption-panel assumption-panel--blue" id="projectionScenarioForm">
+            <div class="assumption-panel__head"><span class="fl-mono">02 / SCHOOL-SPECIFIC</span><h3>DEBT + REAL LIFE</h3><p id="projectionScenarioHelp">Choose a college above. Each school keeps its own salary, location, living costs, and year-by-year loan stack.</p></div>
+            <div class="assumption-fields">
+              <label><span class="fl-label">Expected starting salary</span><input class="fl-input" name="startSalary" type="number" min="0" max="5000000" step="1000" placeholder="Required"></label>
+              <label><span class="fl-label">Work state</span><select class="fl-select" name="workState" id="projectionWorkState"><option value="">Choose state</option></select></label>
+              <label><span class="fl-label">Local income tax override</span><div class="suffix-input"><input class="fl-input" name="localIncomeTaxRate" type="number" min="0" max="25" step="0.1"><span>%</span></div><small>Leave at 0 unless you know a city/local wage tax applies.</small></label>
+            </div>
+
+            <section class="loan-planner" aria-labelledby="loanPlannerHeading">
+              <div class="loan-planner__head">
+                <div><span class="fl-mono">03 / FINANCING STACK</span><h4 id="loanPlannerHeading">FEDERAL FIRST. PRIVATE ONLY FOR THE GAP.</h4></div>
+                <p>CollegeTab models every obligation separately. Direct Subsidized loans do not accrue interest while enrolled at least half-time or during the standard six-month grace period. Direct Unsubsidized and deferred private loans begin accruing from disbursement.</p>
+              </div>
+              <div class="assumption-fields loan-core-fields">
+                <label><span class="fl-label">Federal dependency status</span><select class="fl-select" name="dependencyStatus"><option value="">Choose status</option><option value="dependent">Dependent undergraduate</option><option value="dependent_plus_denied">Dependent / parent unable to obtain PLUS</option><option value="independent">Independent undergraduate</option></select><small>Controls Direct Loan limits. The PLUS-denied option uses the additional unsubsidized eligibility available to qualifying dependent undergraduates; Parent PLUS is then unavailable in that scenario.</small></label>
+                <label><span class="fl-label">Prior federal student principal</span><input class="fl-input" name="priorFederalStudentPrincipal" type="number" min="0" max="1000000" step="100" value="0"><small>Used for federal aggregate-limit checks. If above $0, CollegeTab requires detailed existing-loan terms before producing a repayment projection rather than inventing a blended historical APR.</small></label>
+                <label><span class="fl-label">Of that, prior subsidized principal</span><input class="fl-input" name="priorFederalSubsidizedPrincipal" type="number" min="0" max="1000000" step="100" value="0"><small>Needed to enforce the separate undergraduate subsidized aggregate cap.</small></label>
+                <label><span class="fl-label">Prior Parent PLUS for this student</span><input class="fl-input" name="priorParentPlusPrincipal" type="number" min="0" max="1000000" step="100" value="0"><small>Used for the Parent PLUS aggregate limit. Prior parent debt is not projected without its actual loan terms.</small></label>
+                <div class="federal-repayment-note"><span class="fl-mono">CURRENT-LAW FEDERAL BASELINE</span><strong>TIERED STANDARD</strong><small>For modeled Direct Loans first disbursed on or after July 1, 2026, CollegeTab automatically uses the fixed-payment Tiered Standard term based on the borrower's Direct principal balance: 10, 15, 20, or 25 years. Parent PLUS is calculated on the parent's separate balance sheet.</small></div>
+                <label><span class="fl-label">Extra monthly student-loan payment</span><input class="fl-input" name="extraMonthlyPayment" type="number" min="0" max="1000000" step="25"><small>Applied highest-APR first after minimum payments.</small></label>
+              </div>
+
+              <div class="private-loan-band">
+                <div class="private-loan-band__title"><span class="fl-mono">PRIVATE REPAYMENT BEHAVIOR</span><strong>APR + ORIGINATION FEE ARE ENTERED FOR EACH ACADEMIC-YEAR TRANCHE BELOW.</strong></div>
+                <div class="assumption-fields assumption-fields--private">
+                  <label><span class="fl-label">Private repayment term</span><div class="suffix-input"><input class="fl-input" name="privateTermYears" type="number" min="1" max="50" step="1"><span>YR</span></div><small>Use the lender's actual contract term. Each academic year's APR and fee can differ.</small></label>
+                  <label><span class="fl-label">Private grace / deferment after graduation</span><div class="suffix-input"><input class="fl-input" name="privateGraceMonths" type="number" min="0" max="60" step="1"><span>MO</span></div></label>
+                  <label><span class="fl-label">Private payments while in school</span><select class="fl-select" name="privateInSchoolPaymentMode"><option value="deferred">Deferred — interest accrues unpaid</option><option value="interest_only">Interest-only — accrued interest is paid</option></select><small>Private contracts vary. Deferred is the conservative default.</small></label>
+                  <label><span class="fl-label">Capitalize private interest at repayment?</span><select class="fl-select" name="privateCapitalizeAtRepayment"><option value="yes">Yes — add unpaid interest to principal</option><option value="no">No — keep unpaid interest separate</option></select><small>Match the lender disclosure or promissory note.</small></label>
+                </div>
+              </div>
+
+              <div class="loan-plan-toolbar">
+                <div><span class="fl-mono">ANNUAL BORROWING PLAN</span><strong>Gross amounts borrowed. Origination fees reduce what reaches the school.</strong></div>
+                <button class="fl-button fl-button--quiet" type="button" id="resetLoanPlanButton"><span>Use conservative federal-first plan</span><span class="fl-button__arrow">↻</span></button>
+              </div>
+              <div class="loan-plan-table-wrap"><div class="loan-plan-table" id="loanPlanTable"><p class="loan-plan-empty">Choose dependency status after completing the college-cost workflow.</p></div></div>
+              <details class="loan-rate-details"><summary><span class="fl-mono">ANNUAL LOAN PRICING + FEE ASSUMPTIONS</span><strong>EDIT INPUTS →</strong></summary><div id="loanRateTable"></div><p>For 2026–27, undergraduate Direct Subsidized/Unsubsidized loans use a 6.52% fixed rate and Parent PLUS uses 9.07%. Current federal origination-fee inputs are 1.057% for Direct Subsidized/Unsubsidized and 4.228% for PLUS. Future federal award-year values remain editable planning proxies. Private APR and origination fee are entered separately for each academic-year tranche from the lender's actual terms; enter 0 explicitly when a private loan has no fee.</p></details>
+              <div class="loan-plan-status" id="loanPlanStatus" aria-live="polite"></div>
+            </section>
+
+            <button class="fl-button fl-button--lime" type="submit"><span>Save + continue to monthly budget</span><span class="fl-button__arrow">→</span></button>
+          </form>
+        </div>
+
+        <section class="scenario-output" id="projectionOutput" aria-live="polite">
+          <div class="scenario-output__empty" id="projectionEmpty">
+            <span class="fl-mono">MODEL STATUS</span><h3>INPUTS REQUIRED.</h3><p id="projectionMissingCopy">Complete the college cost workflow and scenario assumptions to calculate this path.</p>
+          </div>
+          <div id="projectionReady" hidden>
+            <div class="scenario-output__top"><div><span class="fl-mono">CALCULATED SCENARIO</span><h3 id="projectionSchoolName">COLLEGE PATH</h3></div><div class="model-fingerprint"><span class="fl-mono">REPRODUCIBLE MODEL ID</span><strong id="projectionFingerprint">—</strong></div></div>
+            <div class="scenario-metrics">
+              <article class="fl-surface--lime"><span class="fl-mono">Projected college cost</span><strong id="projectionTotalCost">—</strong><small>Across modeled attendance years.</small></article>
+              <article class="fl-surface--coral"><span class="fl-mono">Student debt at graduation</span><strong id="projectionDebt">—</strong><small>Federal + private student debt. Parent PLUS is separate.</small></article>
+              <article class="fl-surface--blue"><span class="fl-mono">First-year monthly take-home</span><strong id="projectionTakeHome">—</strong><small>After modeled federal/state/FICA + employee retirement.</small></article>
+              <article class="fl-surface--ink"><span class="fl-mono">Debt-free age</span><strong id="projectionDebtFreeAge">—</strong><small>Tiered Standard federal baseline + entered private-loan terms.</small></article>
+              <article><span class="fl-mono" id="projectionNetWorthKicker">Net worth at target age</span><strong id="projectionNetWorth">—</strong><small>Assets less modeled debt/cash deficit.</small></article>
+              <article><span class="fl-mono">Family contribution future value</span><strong id="projectionFamilyOpportunity">—</strong><small>What modeled family contributions could have grown to at the selected investment return—not an additional bill.</small></article>
+            </div>
+            <div class="loan-stack-summary" aria-label="Loan stack breakdown">
+              <div><span class="fl-mono">Federal student debt</span><strong id="projectionFederalDebt">—</strong><small id="projectionFederalDebtNote">Direct Subsidized + Direct Unsubsidized.</small></div>
+              <div><span class="fl-mono">Private student debt</span><strong id="projectionPrivateDebt">—</strong><small id="projectionPrivateDebtNote">Private principal + unpaid interest under entered lender terms.</small></div>
+              <div><span class="fl-mono">Parent PLUS debt</span><strong id="projectionParentDebt">—</strong><small id="projectionParentDebtNote">Parent obligation; excluded from the student's personal net worth.</small></div>
+              <div><span class="fl-mono">Loan fees withheld</span><strong id="projectionLoanFees">—</strong><small>Origination fees reduce school proceeds while gross principal remains owed.</small></div>
+            </div>
+            <div class="tax-breakdown"><div><span class="fl-mono">FIRST WORK YEAR / FEDERAL</span><strong id="projectionFederalTax">—</strong></div><div><span class="fl-mono">STATE + LOCAL</span><strong id="projectionStateTax">—</strong></div><div><span class="fl-mono">FICA</span><strong id="projectionFicaTax">—</strong></div><div><span class="fl-mono">STUDENT LOAN MINIMUM</span><strong id="projectionLoanPayment">—</strong></div></div>
+            <details class="model-audit" id="projectionAudit"><summary><span class="fl-mono">Calculation audit</span><strong>SHOW FORMULAS, ASSUMPTIONS + YEAR-BY-YEAR OUTPUT →</strong></summary><div id="projectionAuditBody"></div></details>
+          </div>
+        </section>
+      </section>
+
+      <section class="workspace-view" data-view="budget" aria-labelledby="budgetHeading">
+        <div class="view-heading">
+          <div>
+            <span class="fl-mono view-index">[ 04 / MONTHLY BUDGET ]</span>
+            <h2 id="budgetHeading">START WITH<br><span>REAL LIFE.</span></h2>
+          </div>
+          <p>CollegeTab starts with a state-level monthly planning preset. Change any allowance to match the life you actually expect.</p>
+        </div>
+        <div class="step-forward-band fl-surface--blue">
+          <span class="fl-mono">CURRENT PATH</span>
+          <strong>SET THE MONTHLY ALLOWANCES YOU WANT THE MODEL TO RESPECT.</strong>
+          <label class="field-block"><span class="fl-label">College path</span><select class="fl-select" id="budgetSchoolSelect"></select></label>
+        </div>
+        <form class="budget-panel" id="budgetForm">
+          <div class="budget-preset-band fl-surface--lime">
+            <div><span class="fl-mono">STATE PLANNING PRESET</span><strong id="budgetPresetTitle">SET A WORK STATE IN STEP 03</strong><small id="budgetPresetSource">CollegeTab needs the expected work state before it can create a geographic preset.</small></div>
+            <button class="fl-button" type="button" id="applyStateBudgetPreset"><span>Use state preset</span><span class="fl-button__arrow">↺</span></button>
+          </div>
+          <div class="budget-grid">
+            <label class="budget-field"><span class="fl-label">Housing</span><div class="money-month"><b>$</b><input class="fl-input" name="housing" type="number" min="0" max="100000" step="1" required><span>/ MO</span></div><small>Rent or housing allowance, before personal savings.</small></label>
+            <label class="budget-field"><span class="fl-label">Food</span><div class="money-month"><b>$</b><input class="fl-input" name="food" type="number" min="0" max="100000" step="1" required><span>/ MO</span></div></label>
+            <label class="budget-field"><span class="fl-label">Transportation</span><div class="money-month"><b>$</b><input class="fl-input" name="transportation" type="number" min="0" max="100000" step="1" required><span>/ MO</span></div></label>
+            <label class="budget-field"><span class="fl-label">Healthcare</span><div class="money-month"><b>$</b><input class="fl-input" name="healthcare" type="number" min="0" max="100000" step="1" required><span>/ MO</span></div></label>
+            <label class="budget-field"><span class="fl-label">Entertainment</span><div class="money-month"><b>$</b><input class="fl-input" name="entertainment" type="number" min="0" max="100000" step="1" required><span>/ MO</span></div></label>
+            <label class="budget-field"><span class="fl-label">Charity</span><div class="money-month"><b>$</b><input class="fl-input" name="charity" type="number" min="0" max="100000" step="1" required><span>/ MO</span></div></label>
+            <label class="budget-field"><span class="fl-label">Misc.</span><div class="money-month"><b>$</b><input class="fl-input" name="misc" type="number" min="0" max="100000" step="1" required><span>/ MO</span></div></label>
+          </div>
+          <div class="budget-total"><span><small class="fl-mono">MONTHLY ALLOWANCE TOTAL</small><strong id="budgetMonthlyTotal">—</strong></span><p>Anything left after taxes, required loan payments and these allowances moves into CollegeTab's savings workflow.</p></div>
+          <p class="form-message" id="budgetFormMessage" aria-live="polite"></p>
+          <div class="form-actions"><button class="fl-button fl-button--blue" type="submit"><span>Save + continue to savings</span><span class="fl-button__arrow">→</span></button></div>
+        </form>
+      </section>
+
+      <section class="workspace-view" data-view="savings" aria-labelledby="savingsHeading">
+        <div class="view-heading">
+          <div>
+            <span class="fl-mono view-index">[ 05 / SAVINGS ]</span>
+            <h2 id="savingsHeading">PROTECT FIRST.<br><span>THEN BUILD.</span></h2>
+          </div>
+          <p>Set the emergency reserve, account eligibility and where each additional savings dollar should go once the reserve is full.</p>
+        </div>
+        <div class="step-forward-band fl-surface--coral">
+          <span class="fl-mono">CURRENT PATH</span>
+          <strong>YOUR SAVINGS RULES APPLY AFTER THE MONTHLY BUDGET.</strong>
+          <label class="field-block"><span class="fl-label">College path</span><select class="fl-select" id="savingsSchoolSelect"></select></label>
+        </div>
+        <details class="savings-explainer">
+          <summary><span>How does our savings model work?</span><span>OPEN →</span></summary>
+          <div>
+            <p><b>1. Cover the month.</b><br>Taxes, required student-loan payments and your monthly allowances come first.</p>
+            <p><b>2. Fill the emergency fund.</b><br>Available savings first fill a dedicated emergency HYSA up to the number of months you choose.</p>
+            <p><b>3. Reprice it every year.</b><br>Monthly essentials inflate over time, so CollegeTab recalculates the reserve target annually and tops it back up when necessary.</p>
+            <p><b>4. Allocate the rest.</b><br>Once the emergency fund is full, the remaining savings follow your 401(k), HSA, Roth IRA, brokerage and cash/HYSA preferences, subject to modeled account limits and eligibility.</p>
+          </div>
+        </details>
+        <form class="savings-panel" id="savingsForm">
+          <div class="savings-grid">
+            <section class="savings-block fl-surface--lime">
+              <span class="fl-mono">01 / EMERGENCY FUND</span><h3>SET THE FLOOR.</h3>
+              <label><span class="fl-label">Months of essential expenses</span><input class="fl-input" name="emergencyMonths" type="number" min="0" max="24" step="0.5" required><small>Housing, food, transportation, healthcare, misc. and required student-loan payments.</small></label>
+              <label><span class="fl-label">Emergency HYSA annual yield</span><div class="percent-input"><input class="fl-input" name="cashHysaRate" type="number" min="0" max="25" step="0.1" required><span>%</span></div><small>Editable planning assumption, not a guaranteed rate.</small></label>
+              <label><span class="fl-label">Emergency savings already held</span><div class="money-input"><span>$</span><input class="fl-input" name="startingEmergencySavings" type="number" min="0" max="10000000" step="1" required></div></label>
+            </section>
+            <section class="savings-block">
+              <span class="fl-mono">02 / ACCESS</span><h3>WHAT CAN YOU USE?</h3>
+              <label class="setting-toggle"><span><b>401(k) available</b><small>Enable only if the expected employer offers one.</small></span><input name="k401Available" type="checkbox"></label>
+              <label><span class="fl-label">HSA eligibility</span><select class="fl-select" name="hsaCoverage" required><option value="none">Not HSA eligible</option><option value="self">Self-only HSA coverage</option><option value="family">Family HSA coverage</option></select></label>
+              <label><span class="fl-label">Employer retirement contribution</span><div class="percent-input"><input class="fl-input" name="employerContributionRate" type="number" min="0" max="100" step="0.1" required><span>%</span></div></label>
+              <label><span class="fl-label">Investment return assumption</span><div class="percent-input"><input class="fl-input" name="investmentReturnRate" type="number" min="-50" max="100" step="0.1" required><span>%</span></div><small>Nominal planning assumption; not guaranteed.</small></label>
+            </section>
+            <section class="savings-block fl-surface--blue">
+              <span class="fl-mono">03 / STARTING BALANCES</span><h3>START WHERE YOU ARE.</h3>
+              <label><span class="fl-label">Bank cash</span><div class="money-input"><span>$</span><input class="fl-input" name="startingCash" type="number" min="0" max="10000000" step="1" required></div></label>
+              <label><span class="fl-label">401(k)</span><div class="money-input"><span>$</span><input class="fl-input" name="starting401k" type="number" min="0" max="10000000" step="1" required></div></label>
+              <label><span class="fl-label">HSA</span><div class="money-input"><span>$</span><input class="fl-input" name="startingHsa" type="number" min="0" max="10000000" step="1" required></div></label>
+              <label><span class="fl-label">Roth IRA</span><div class="money-input"><span>$</span><input class="fl-input" name="startingRoth" type="number" min="0" max="10000000" step="1" required></div></label>
+              <label><span class="fl-label">Brokerage</span><div class="money-input"><span>$</span><input class="fl-input" name="startingBrokerage" type="number" min="0" max="10000000" step="1" required></div></label>
+            </section>
+          </div>
+          <div class="allocation-panel">
+            <div class="allocation-head"><div><span class="fl-mono">AFTER THE EMERGENCY FUND</span><h3>ALLOCATE EVERY EXTRA DOLLAR.</h3></div><strong id="allocationTotal">100%</strong></div>
+            <p>Percentages must total 100%. CollegeTab applies account limits and routes legal/eligibility overflow to taxable brokerage instead of dropping it.</p>
+            <div class="allocation-grid">
+              <label><span class="fl-label">401(k)</span><div class="percent-input"><input class="fl-input" name="allocation401k" type="number" min="0" max="100" step="0.1" required><span>%</span></div></label>
+              <label><span class="fl-label">HSA</span><div class="percent-input"><input class="fl-input" name="allocationHsa" type="number" min="0" max="100" step="0.1" required><span>%</span></div></label>
+              <label><span class="fl-label">Roth IRA</span><div class="percent-input"><input class="fl-input" name="allocationRoth" type="number" min="0" max="100" step="0.1" required><span>%</span></div></label>
+              <label><span class="fl-label">Brokerage</span><div class="percent-input"><input class="fl-input" name="allocationBrokerage" type="number" min="0" max="100" step="0.1" required><span>%</span></div></label>
+              <label><span class="fl-label">Cash / HYSA</span><div class="percent-input"><input class="fl-input" name="allocationCash" type="number" min="0" max="100" step="0.1" required><span>%</span></div></label>
+            </div>
+            <div class="allocation-error" id="allocationError" aria-live="polite"></div>
+          </div>
+          <p class="assumption-footnote">CollegeTab models the emergency reserve separately from user-directed cash. The reserve stops growing once it reaches its inflation-adjusted target; additional savings follow the allocation above.</p>
+          <div class="form-actions"><button class="fl-button fl-button--lime" type="submit"><span>Save + continue to compare</span><span class="fl-button__arrow">→</span></button></div>
+        </form>
+      </section>
+
+      <section class="workspace-view" data-view="saved" aria-labelledby="savedHeading">
+        <div class="view-heading">
+          <div>
+            <span class="fl-mono view-index">[ 05 / SAVED PLANS ]</span>
+            <h2 id="savedHeading">KEEP EVERY<br><span>PLAN.</span></h2>
+          </div>
+          <p>Scenario history will eventually sync to an account. In this prototype, plan structure is stored only in this browser so navigation and state can be tested safely.</p>
+        </div>
+        <div class="saved-toolbar"><span class="fl-mono">Local prototype</span><button class="fl-button fl-button--lime" type="button" data-new-plan><span>New plan</span><span class="fl-button__arrow">＋</span></button></div>
+        <div class="saved-list" id="savedList"></div>
+      </section>
+
+      <section class="workspace-view" data-view="account" aria-labelledby="accountHeading">
+        <div class="view-heading compact-heading">
+          <div>
+            <span class="fl-mono view-index">[ ACCOUNT ]</span>
+            <h2 id="accountHeading">YOUR<br><span>WORKSPACE.</span></h2>
+          </div>
+          <p>Account identity and cloud sync are not connected yet. These preferences demonstrate the final information architecture without collecting unnecessary data.</p>
+        </div>
+        <form class="settings-panel" id="settingsForm">
+          <div class="settings-section">
+            <span class="fl-mono">Planning defaults</span>
+            <div class="field-pair">
+              <label class="field-block"><span class="fl-label">Default perspective</span><select class="fl-select" name="defaultRole"><option value="">No default</option><option value="student">Student</option><option value="family">Family</option><option value="advisor">Advisor</option></select><small class="fl-field-help">Applied only when you create a new plan. It never changes an existing plan.</small></label>
+              <label class="field-block"><span class="fl-label">Currency</span><select class="fl-select" name="currency"><option value="USD">USD — U.S. Dollar</option></select></label>
+            </div>
+          </div>
+          <div class="settings-section">
+            <span class="fl-mono">Product preferences</span>
+            <label class="setting-toggle"><span><b>Reduced interface motion</b><small>Use fewer decorative transitions inside the app.</small></span><input type="checkbox" name="reduceMotion"></label>
+          </div>
+          <div class="settings-actions"><button class="fl-button fl-button--blue" type="submit"><span>Save preferences</span><span class="fl-button__arrow">✓</span></button><a class="fl-button fl-button--quiet" href="auth.html" id="signOutLink">Sign out of prototype →</a></div>
+        </form>
+      </section>
+
+      <section class="workspace-view" data-view="billing" aria-labelledby="billingHeading">
+        <div class="view-heading compact-heading">
+          <div>
+            <span class="fl-mono view-index">[ BILLING ]</span>
+            <h2 id="billingHeading">ONE PRICE.<br><span>NO TIER MAZE.</span></h2>
+          </div>
+          <p>The billing shell is designed around the planned annual subscription. Stripe and real entitlements will be connected only after the core planning engine is working.</p>
+        </div>
+        <div class="billing-grid">
+          <article class="billing-current fl-surface--ink">
+            <span class="fl-mono">Current access</span><h3>Prototype</h3><p>Local planning shell. No payment method attached.</p><div class="billing-status"><i></i>NO ACTIVE SUBSCRIPTION</div>
+          </article>
+          <article class="billing-offer fl-surface--coral">
+            <span class="fl-mono">CollegeTab annual</span><div class="billing-price"><sup>$</sup>29<small>.99 / year</small></div><p>Unlimited planning scenarios, comparisons, projections and saved plans when the production product launches.</p><button class="fl-button" type="button" id="billingPrototypeButton"><span>Billing integration next</span><span class="fl-button__arrow">↗</span></button>
+          </article>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <nav class="mobile-bottom-nav" aria-label="Mobile workspace navigation">
+    <a href="#onboarding" data-route="onboarding"><span>01</span>Setup</a>
+    <a href="#colleges" data-route="colleges"><span>02</span>Cost</a>
+    <a href="#projection" data-route="projection"><span>03</span>Career</a>
+    <a href="#budget" data-route="budget"><span>04</span>Budget</a>
+    <a href="#savings" data-route="savings"><span>05</span>Savings</a>
+    <a href="#compare" data-route="compare"><span>06</span>Compare</a>
+  </nav>
+
+  <dialog class="fl-dialog" id="newPlanDialog">
+    <form method="dialog" class="dialog-card" id="newPlanForm">
+      <div class="dialog-head"><span class="fl-mono">New plan</span><button type="button" aria-label="Close dialog" data-close-dialog="newPlanDialog">×</button></div>
+      <h2>START CLEAN.<br><span>KEEP THE OLD VERSION.</span></h2>
+      <p>Your current prototype plan will stay in local saved plans. The new plan starts with no schools or assumptions.</p>
+      <label class="field-block"><span class="fl-label">New plan name</span><input class="fl-input" id="newPlanNameInput" type="text" maxlength="60" placeholder="Untitled plan"></label>
+      <div class="dialog-actions"><button class="fl-button fl-button--quiet" value="cancel" type="button" data-close-dialog="newPlanDialog">Cancel</button><button class="fl-button fl-button--lime" type="submit"><span>Create plan</span><span class="fl-button__arrow">→</span></button></div>
+    </form>
+  </dialog>
+
+  <dialog class="fl-dialog" id="deletePlanDialog">
+    <div class="dialog-card">
+      <div class="dialog-head"><span class="fl-mono">Delete local plan</span><button type="button" aria-label="Close dialog" data-close-dialog="deletePlanDialog">×</button></div>
+      <h2>DELETE THIS<br><span>LOCAL PLAN?</span></h2>
+      <p id="deletePlanCopy">This removes the saved plan from this browser. The current plan is never deleted from this dialog.</p>
+      <div class="dialog-actions"><button class="fl-button fl-button--quiet" type="button" data-close-dialog="deletePlanDialog">Cancel</button><button class="fl-button fl-button--danger" type="button" id="confirmDeletePlan"><span>Delete plan</span><span class="fl-button__arrow">×</span></button></div>
+    </div>
+  </dialog>
+
+  <dialog class="fl-dialog" id="billingDialog">
+    <div class="dialog-card">
+      <div class="dialog-head"><span class="fl-mono">Billing status</span><button aria-label="Close dialog" data-close-dialog="billingDialog">×</button></div>
+      <h2>NOT CONNECTED.<br><span>ON PURPOSE.</span></h2>
+      <p>Stripe checkout and subscription entitlements belong after the core product works. This prevents a polished purchase flow from outrunning the actual planning engine.</p>
+      <div class="dialog-actions"><button class="fl-button fl-button--blue" type="button" data-close-dialog="billingDialog"><span>Got it</span><span class="fl-button__arrow">✓</span></button></div>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="college-data.js"></script>
+  <script src="college-cost-math.js"></script>
+  <script src="state-tax-data-2026.js"></script>
+  <script src="cost-of-living-data-2026.js"></script>
+  <script src="loan-engine.js"></script>
+  <script src="savings-engine.js"></script>
+  <script src="financial-engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

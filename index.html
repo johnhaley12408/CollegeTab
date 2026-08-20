@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="CollegeTab — compare college costs, career outcomes, and your financial future in one place." />
+  <title>CollegeTab — Know what college really costs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Mono:wght@300;400;500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="design-system.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="cursor-field" aria-hidden="true">
+    <span class="orb orb-a"></span>
+    <span class="orb orb-b"></span>
+    <span class="orb orb-c"></span>
+  </div>
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <a class="brand magnetic" href="#top" aria-label="CollegeTab home">
+      <span class="brand-mark">FL</span>
+      <span class="brand-word">COLLEGETAB</span>
+    </a>
+    <nav class="nav" aria-label="Primary navigation">
+      <a href="#how">How it works</a>
+      <a href="#compare">Compare</a>
+      <a href="#pricing">Pricing</a>
+    </nav>
+    <div class="site-actions">
+      <a class="nav-signin" href="auth.html?mode=signin">SIGN IN</a>
+      <a class="nav-cta magnetic" href="auth.html?mode=signup">BUILD YOUR PLAN <span>↗</span></a>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero section-shell">
+      <div class="hero-kicker reveal">COLLEGE COSTS ARE ONLY THE FIRST LINE ITEM.</div>
+      <h1 class="hero-title reveal">
+        PICK A COLLEGE.<br>
+        SEE THE <span class="scribble" data-word="WHOLE">WHOLE</span><br>
+        <span class="cutout">FUTURE.</span>
+      </h1>
+      <div class="hero-bottom reveal">
+        <p>CollegeTab turns tuition, aid, loans, salary, taxes, rent, investing and real-life choices into one financial picture you can actually understand.</p>
+        <a class="primary-action magnetic" href="auth.html?mode=signup">
+          <span>START A FREE PLAN</span>
+          <span class="action-arrow">→</span>
+        </a>
+      </div>
+
+      <div class="ticker-strip" aria-label="CollegeTab capabilities">
+        <div class="ticker-track">
+          <span>COLLEGE COSTS</span><i>•</i><span>NET PRICE</span><i>•</i><span>LOAN IMPACT</span><i>•</i><span>TAKE-HOME PAY</span><i>•</i><span>REAL TAX ESTIMATES</span><i>•</i><span>NET WORTH</span><i>•</i><span>SCENARIO COMPARE</span><i>•</i>
+          <span>COLLEGE COSTS</span><i>•</i><span>NET PRICE</span><i>•</i><span>LOAN IMPACT</span><i>•</i><span>TAKE-HOME PAY</span><i>•</i><span>REAL TAX ESTIMATES</span><i>•</i><span>NET WORTH</span><i>•</i><span>SCENARIO COMPARE</span><i>•</i>
+        </div>
+      </div>
+    </section>
+
+    <section class="manifesto section-shell" id="how">
+      <div class="manifesto-index mono">[ 01 / THE PROBLEM ]</div>
+      <div class="manifesto-copy">
+        <p class="eyebrow reveal">A DECISION THIS BIG DESERVES BETTER THAN A TUITION NUMBER.</p>
+        <h2 class="display-copy reveal">A $20K scholarship can still lose to a cheaper school. A $110K salary can still feel tight in the wrong city. <span>We connect the parts everyone else leaves separate.</span></h2>
+      </div>
+    </section>
+
+    <section class="steps section-shell">
+      <article class="step step-lime reveal">
+        <div class="step-num mono">01</div>
+        <h3>Choose your schools.</h3>
+        <p>Search U.S. colleges, load real published costs, then adjust what matters to your family.</p>
+        <div class="mini-ui school-list" aria-hidden="true">
+          <div><span>01</span><strong>COLLEGE A</strong><b>DATA READY</b></div>
+          <div><span>02</span><strong>COLLEGE B</strong><b>DATA READY</b></div>
+          <div><span>03</span><strong>COLLEGE C</strong><b>INPUT NEEDED</b></div>
+        </div>
+      </article>
+
+      <article class="step step-coral reveal">
+        <div class="step-num mono">02</div>
+        <h3>Build the real cost.</h3>
+        <p>Aid, inflation, housing, travel, personal spending and financing — not just sticker price.</p>
+        <div class="mini-ui bars" aria-hidden="true">
+          <div><label>Published cost</label><span style="--w: 100%"></span><b>VERIFIED</b></div>
+          <div><label>Grants + aid</label><span style="--w: 100%"></span><b>USER INPUT</b></div>
+          <div><label>True year one</label><span style="--w: 100%"></span><b>CALCULATED</b></div>
+        </div>
+      </article>
+
+      <article class="step step-blue reveal">
+        <div class="step-num mono">03</div>
+        <h3>Run your life forward.</h3>
+        <p>Career income, taxes, rent, loan payoff, savings and investments — projected together.</p>
+        <div class="mini-ui projection" aria-hidden="true">
+          <svg viewBox="0 0 500 160" role="presentation">
+            <path class="projection-grid" d="M0 130H500M0 90H500M0 50H500M70 0V160M180 0V160M290 0V160M400 0V160" />
+            <path class="projection-line" d="M0 143 C70 139 90 125 145 120 S235 92 290 87 S365 50 420 42 S470 20 500 8" />
+          </svg>
+          <div class="projection-label"><span>GRADUATION</span><b>INPUTS</b></div>
+          <div class="projection-label right"><span>FUTURE</span><b>OUTPUTS</b></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="compare section-shell" id="compare">
+      <div class="compare-header">
+        <div>
+          <div class="mono section-index">[ 02 / SIDE-BY-SIDE ]</div>
+          <h2 class="reveal">THE CHEAPEST SCHOOL<br>ISN'T ALWAYS THE<br><span>BEST DEAL.</span></h2>
+        </div>
+        <p class="reveal">Toggle assumptions. Change salaries. Change cities. Change how much your parents contribute. Watch the entire outcome update instead of staring at a static spreadsheet.</p>
+      </div>
+
+      <div class="compare-board reveal" data-tilt-card>
+        <div class="board-top">
+          <span class="mono">SCENARIO / 03</span>
+          <span class="live-dot"><i></i>LIVE MODEL</span>
+        </div>
+        <div class="scenario-grid">
+          <div class="scenario-labels mono">
+            <span>SCHOOL</span><span>4-YR OUT OF POCKET</span><span>LOANS AT GRAD.</span><span>STARTING PAY</span><span>AGE 30 NET WORTH</span>
+          </div>
+          <div class="scenario scenario-a">
+            <div class="scenario-school"><span>A</span><strong>COLLEGE A</strong></div>
+            <div>—</div>
+            <div>—</div>
+            <div>—</div>
+            <div class="scenario-big">INPUT NEEDED</div>
+          </div>
+          <div class="scenario scenario-b">
+            <div class="scenario-school"><span>B</span><strong>COLLEGE B</strong></div>
+            <div>—</div>
+            <div>—</div>
+            <div>—</div>
+            <div class="scenario-big">INPUT NEEDED</div>
+          </div>
+        </div>
+        <div class="board-foot mono">
+          <span>OUTPUTS STAY BLANK UNTIL VERIFIED INPUTS + ENGINES ARE CONNECTED</span>
+          <a href="auth.html?mode=signup">OPEN WORKSPACE ↗</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="truth section-shell">
+      <div class="truth-line truth-line-one">TUITION IS A PRICE.</div>
+      <div class="truth-line truth-line-two">YOUR LIFE IS A MODEL.</div>
+      <p>CollegeTab is built to show the math behind the choice — clearly enough that students and parents can argue about assumptions instead of guessing at outcomes.</p>
+    </section>
+
+    <section class="calculator section-shell" id="start">
+      <div class="calc-left">
+        <span class="mono">[ 03 / TRY IT ]</span>
+        <h2>CHANGE ONE NUMBER.<br><span>WATCH THE FUTURE MOVE.</span></h2>
+        <p>This previews how assumptions will feel to edit. The result stays blank until the production calculation engine is connected and validated.</p>
+      </div>
+      <div class="calc-console" data-tilt-card>
+        <div class="console-row">
+          <label for="schoolCost">ANNUAL NET COLLEGE COST</label>
+          <output id="schoolCostOut">$42,000</output>
+          <input id="schoolCost" type="range" min="10000" max="90000" step="1000" value="42000">
+        </div>
+        <div class="console-row">
+          <label for="salary">STARTING SALARY</label>
+          <output id="salaryOut">$92,000</output>
+          <input id="salary" type="range" min="45000" max="180000" step="1000" value="92000">
+        </div>
+        <div class="console-row">
+          <label for="savings">MONTHLY INVESTING</label>
+          <output id="savingsOut">$1,150</output>
+          <input id="savings" type="range" min="0" max="4000" step="50" value="1150">
+        </div>
+        <div class="console-result">
+          <span class="mono">PROJECTION OUTPUT</span>
+          <strong id="netWorthOut">ENGINE PENDING</strong>
+          <small>No fabricated projection is shown before the model is validated.</small>
+        </div>
+      </div>
+    </section>
+
+    <section class="pricing section-shell" id="pricing">
+      <div class="pricing-stamp" aria-hidden="true">ONE<br>PRICE.</div>
+      <div class="pricing-copy">
+        <span class="mono">[ 04 / PRICE ]</span>
+        <h2>ONE YEAR.<br>EVERY SCENARIO.</h2>
+        <p>No confusing tiers. No locked “premium” calculator. Build, compare and revisit your plan whenever decisions change.</p>
+      </div>
+      <div class="price-block">
+        <div class="price"><sup>$</sup>29<small>.99 / YEAR</small></div>
+        <a href="auth.html?mode=signup" class="checkout magnetic">GET COLLEGETAB <span>↗</span></a>
+        <p>Cancel anytime. Your plan stays yours.</p>
+      </div>
+    </section>
+
+    <section class="final-cta section-shell">
+      <p class="mono">COLLEGE IS EXPENSIVE. NOT KNOWING WHY IS WORSE.</p>
+      <a href="auth.html?mode=signup" class="final-link magnetic">BUILD THE PLAN <span>→</span></a>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-brand">COLLEGETAB</div>
+    <div class="footer-meta mono">
+      <span>© 2026 COLLEGETAB</span>
+      <a href="#">PRIVACY</a>
+      <a href="#">TERMS</a>
+      <span>BUILT FOR BIG DECISIONS.</span>
+    </div>
+  </footer>
+
+  <div class="cursor-dot" aria-hidden="true"></div>
+  <script src="script.js"></script>
+</body>
+</html>

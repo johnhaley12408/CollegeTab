@@ -1,0 +1,15 @@
+const assert = require('assert');
+const m = require('../college-cost-math.js');
+assert.strictEqual(m.sumComplete([10000, 12000, 1500, 2500]), 26000);
+assert.strictEqual(m.sumComplete([10000, null, 1500, 2500]), null);
+assert.ok(Math.abs(m.cagr(100, 121, 2) - 0.10) < 1e-12);
+assert.strictEqual(m.cagr(0, 121, 2), null);
+const current = m.projectTotal({ annualCost: 10000, annualGrowthRate: 0.05, baseYear: 2026, startYear: 2026, attendanceYears: 4 });
+assert.ok(Math.abs(current - 43101.25) < 1e-6);
+const future = m.projectTotal({ annualCost: 10000, annualGrowthRate: 0.05, baseYear: 2025, startYear: 2026, attendanceYears: 4 });
+assert.ok(Math.abs(future - 45256.3125) < 1e-6);
+assert.strictEqual(m.fundingTotal({ grantsAnnual: 5000, familyAnnual: 10000, attendanceYears: 4 }), 60000);
+assert.strictEqual(m.fundingTotal({ grantsAnnual: null, familyAnnual: 10000, attendanceYears: 4 }), null);
+assert.strictEqual(m.borrowingRequirement(100000, 60000), 40000);
+assert.strictEqual(m.borrowingRequirement(50000, 60000), 0);
+console.log('PASS test-cost-math');

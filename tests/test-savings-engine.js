@@ -1,0 +1,15 @@
+const assert = require('assert');
+const S = require('../savings-engine.js');
+assert.strictEqual(S.VERSION, '2026.08.20-v1');
+const prefs = S.validatePreferences({k401:50,hsa:0,roth:25,brokerage:25,cash:0});
+assert.strictEqual(prefs.ready,true);
+assert.strictEqual(S.validatePreferences({k401:60,hsa:0,roth:25,brokerage:25,cash:0}).ready,false);
+assert.strictEqual(S.emergencyTarget({monthlyEssentials:3000,months:3}),9000);
+const limits=S.accountLimits({taxYear:2026,age:22,filingStatus:'single',magi:70000,hsaCoverage:'none'});
+assert.strictEqual(limits.k401,24500);
+assert.strictEqual(limits.roth,7500);
+assert.strictEqual(limits.hsa,0);
+const alloc=S.allocate({amount:20000,preferences:{k401:50,hsa:0,roth:25,brokerage:25,cash:0},limits,eligibility:{k401:true,hsa:false,roth:true}});
+assert.strictEqual(alloc.ready,true);
+assert.strictEqual(Object.values(alloc.allocations).reduce((a,b)=>a+b,0),20000);
+console.log('PASS test-savings-engine');

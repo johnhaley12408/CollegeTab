@@ -1,0 +1,3 @@
+UNITID,INSTNM,CITY,STABBR,CONTROL,WEBADDR,NPCURL,OPEID
+100001,"Example, State University",Sampletown,CA,1,example.edu,example.edu/npc,00123400
+100002,Example College,Sample City,MA,2,https://college.example,https://college.example/price,00567800
