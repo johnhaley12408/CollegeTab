@@ -1,6 +1,7 @@
 # CollegeTab QA — Financial Engine + Scenario Experience
 
-Current financial engine: `2026.08.20-v5`  
+Current financial engine: `2026.08.20-v7`
+
 Current loan engine: `2026.08.19-loans-v4`
 
 Review order is mandatory: **logic / sellability → aesthetic → functionality / accuracy**.
