@@ -16,6 +16,8 @@ const VALID_ROLES = new Set(['student', 'family', 'advisor']);
 const VALID_YEARS = new Set(['1', '2', '3', '4', '5', '6', '7', '8']);
 const VALID_PROGRAMS = new Set(['', 'associate', 'bachelor', 'certificate', 'other']);
 const VALID_PRIORITIES = new Set(['cost', 'debt', 'income', 'wealth']);
+const BUDGET_CATEGORIES = Object.freeze(['housing','food','transportation','healthcare','entertainment','charity','misc']);
+const DEFAULT_SECTIONAL_INFLATION = Object.freeze({ housing:3.2, food:3.0, transportation:2.9, healthcare:2.7, entertainment:2.6, charity:2.5, misc:2.5 });
 
 const routeMeta = {
   overview: ['Overview', 'Your plan, with one clear next step.'],
@@ -124,6 +126,8 @@ function normalizeBudget(value = {}) {
   const legacyHousing = nullableMoney(value.housingAnnual, 1000000);
   const legacyOther = nullableMoney(value.otherAnnual, 1000000);
   const raw = value.budget && typeof value.budget === 'object' ? value.budget : {};
+  const rawRates = raw.inflationRates && typeof raw.inflationRates === 'object' ? raw.inflationRates : {};
+  const presetRates = window.CollegeTabCostOfLiving2026?.inflationPreset?.()?.rates || DEFAULT_SECTIONAL_INFLATION;
   return {
     food: nullableMoney(raw.food, 100000),
     housing: nullableMoney(raw.housing, 100000) ?? (legacyHousing == null ? null : Math.round(legacyHousing / 12)),
@@ -132,6 +136,8 @@ function normalizeBudget(value = {}) {
     entertainment: nullableMoney(raw.entertainment, 100000),
     charity: nullableMoney(raw.charity, 100000),
     misc: nullableMoney(raw.misc, 100000) ?? (legacyOther == null ? null : Math.round(legacyOther / 12)),
+    inflationRates: Object.fromEntries(BUDGET_CATEGORIES.map(key => [key, nullableNumber(rawRates[key], 0, 20, 2) ?? presetRates[key]])),
+    inflationSource: typeof raw.inflationSource === 'string' ? raw.inflationSource : 'bls-cpi-2026-07-planning-preset',
     source: typeof raw.source === 'string' ? raw.source : (legacyHousing != null || legacyOther != null ? 'legacy-custom' : ''),
     sourceState: /^[A-Z]{2}$/.test(String(raw.sourceState || '').toUpperCase()) ? String(raw.sourceState).toUpperCase() : ''
   };
@@ -167,6 +173,7 @@ function normalizeProjection(raw) {
   const value = raw && typeof raw === 'object' ? raw : {};
   const legacyRetirement = nullableNumber(value.retirementRate, 0, 100, 2);
   const rawAlloc = value.allocations && typeof value.allocations === 'object' ? value.allocations : {};
+  const rawContributionRates = value.contributionRates && typeof value.contributionRates === 'object' ? value.contributionRates : {};
   const default401 = legacyRetirement != null ? Math.min(100, legacyRetirement) : 50;
   return {
     graduationAge: nullableNumber(value.graduationAge, 16, 80, 0) ?? 22,
@@ -180,12 +187,11 @@ function normalizeProjection(raw) {
     cashHysaRate: nullableNumber(value.cashHysaRate, 0, 25, 2) ?? 3.5,
     k401Available: typeof value.k401Available === 'boolean' ? value.k401Available : true,
     hsaCoverage: ['none','self','family'].includes(value.hsaCoverage) ? value.hsaCoverage : 'none',
-    allocations: {
-      k401: nullableNumber(rawAlloc.k401, 0, 100, 2) ?? default401,
-      hsa: nullableNumber(rawAlloc.hsa, 0, 100, 2) ?? 0,
-      roth: nullableNumber(rawAlloc.roth, 0, 100, 2) ?? (legacyRetirement != null ? 0 : 25),
-      brokerage: nullableNumber(rawAlloc.brokerage, 0, 100, 2) ?? (legacyRetirement != null ? 100-default401 : 25),
-      cash: nullableNumber(rawAlloc.cash, 0, 100, 2) ?? 0
+    contributionRates: {
+      k401: nullableNumber(rawContributionRates.k401, 0, 100, 2) ?? nullableNumber(rawAlloc.k401, 0, 100, 2) ?? default401,
+      hsa: nullableNumber(rawContributionRates.hsa, 0, 100, 2) ?? nullableNumber(rawAlloc.hsa, 0, 100, 2) ?? 0,
+      roth: nullableNumber(rawContributionRates.roth, 0, 100, 2) ?? nullableNumber(rawAlloc.roth, 0, 100, 2) ?? (legacyRetirement != null ? 0 : 25),
+      brokerage: nullableNumber(rawContributionRates.brokerage, 0, 100, 2) ?? nullableNumber(rawAlloc.brokerage, 0, 100, 2) ?? (legacyRetirement != null ? 100-default401 : 25)
     },
     startingEmergencySavings: nullableMoney(value.startingEmergencySavings, 10000000) ?? 0,
     startingCash: nullableMoney(value.startingCash, 10000000) ?? 0,
@@ -448,9 +454,10 @@ function setRoute(route, { pushHash = false } = {}) {
 
 function budgetComplete(school) {
   const b = school?.scenario?.budget || {};
-  const valuesReady=['food','housing','transportation','healthcare','entertainment','charity','misc'].every(key => Number.isFinite(b[key]) && b[key] >= 0);
+  const valuesReady=BUDGET_CATEGORIES.every(key => Number.isFinite(b[key]) && b[key] >= 0);
+  const ratesReady=BUDGET_CATEGORIES.every(key => Number.isFinite(b.inflationRates?.[key]) && b.inflationRates[key] >= 0 && b.inflationRates[key] <= 20);
   const stateAligned=!b.sourceState || !school?.scenario?.workState || b.sourceState===school.scenario.workState;
-  return valuesReady && stateAligned;
+  return valuesReady && ratesReady && stateAligned;
 }
 function careerLoansComplete(school) {
   if (!school?.scenario?.startSalary && school?.scenario?.startSalary !== 0) return false;
@@ -461,9 +468,9 @@ function careerLoansComplete(school) {
 }
 function savingsComplete() {
   const p = plan.projection || {};
-  const a = p.allocations || {};
-  const total = ['k401','hsa','roth','brokerage','cash'].reduce((sum,key)=>sum+(Number(a[key])||0),0);
-  return p.savingsConfirmed===true && Number.isFinite(p.emergencyMonths) && Number.isFinite(p.cashHysaRate) && Number.isFinite(p.investmentReturnRate) && Math.abs(total-100)<0.01 && !(a.k401>0 && p.k401Available===false) && !(a.hsa>0 && p.hsaCoverage==='none');
+  const rates = p.contributionRates || {};
+  const ratesReady = ['k401','hsa','roth','brokerage'].every(key => Number.isFinite(rates[key]) && rates[key] >= 0 && rates[key] <= 100);
+  return p.savingsConfirmed===true && Number.isFinite(p.emergencyMonths) && Number.isFinite(p.cashHysaRate) && Number.isFinite(p.investmentReturnRate) && ratesReady && !(rates.k401>0 && p.k401Available===false) && !(rates.hsa>0 && p.hsaCoverage==='none');
 }
 function readiness() {
   const profileDone = Boolean(plan.profile.role && plan.profile.startYear && plan.profile.yearsEnrolled);
@@ -874,10 +881,10 @@ function effectiveLoanRows(school, model) {
   })) : [];
 }
 
-function scenarioInputForSchool(school) {
+function scenarioInputForSchool(school, projectionOverride = null) {
   const model = calculateSchoolModel(school);
   const scenario = school?.scenario || normalizeScenario({});
-  const shared = plan.projection || normalizeProjection({});
+  const shared = projectionOverride ? normalizeProjection(projectionOverride) : (plan.projection || normalizeProjection({}));
   const rows = effectiveLoanRows(school, model);
   return {
     model,
@@ -925,7 +932,10 @@ function scenarioInputForSchool(school) {
         filingStatus: shared.filingStatus,
         localIncomeTaxRate: scenario.localIncomeTaxRate / 100
       },
-      expenses: { monthly: { ...scenario.budget } },
+      expenses: {
+        monthly: Object.fromEntries(BUDGET_CATEGORIES.map(key => [key, scenario.budget[key]])),
+        inflationRates: Object.fromEntries(BUDGET_CATEGORIES.map(key => [key, scenario.budget.inflationRates[key] / 100]))
+      },
       economy: { inflationRate: shared.inflationRate / 100 },
       wealth: {
         employerContributionRate: shared.employerContributionRate / 100,
@@ -934,7 +944,7 @@ function scenarioInputForSchool(school) {
         cashHysaRate: shared.cashHysaRate / 100,
         k401Available: shared.k401Available,
         hsaCoverage: shared.hsaCoverage,
-        allocations: { ...shared.allocations },
+        contributionRates: { ...shared.contributionRates },
         startingEmergencySavings: shared.startingEmergencySavings,
         startingCash: shared.startingCash,
         starting401k: shared.starting401k,
@@ -989,14 +999,25 @@ const SCENARIO_MISSING_LABELS = {
   'expenses.monthly.entertainment': 'monthly entertainment allowance',
   'expenses.monthly.charity': 'monthly charity allowance',
   'expenses.monthly.misc': 'monthly miscellaneous allowance',
+  'expenses.inflationRates.housing': 'housing inflation rate',
+  'expenses.inflationRates.food': 'food inflation rate',
+  'expenses.inflationRates.transportation': 'transportation inflation rate',
+  'expenses.inflationRates.healthcare': 'healthcare inflation rate',
+  'expenses.inflationRates.entertainment': 'entertainment inflation rate',
+  'expenses.inflationRates.charity': 'charity inflation rate',
+  'expenses.inflationRates.misc': 'miscellaneous inflation rate',
   'economy.inflationRate': 'inflation assumption',
   'wealth.cashHysaRate': 'cash / HYSA yield assumption',
   'wealth.k401Available': '401(k) availability',
   'wealth.hsaCoverage': 'HSA eligibility',
   'savings.confirmed': 'confirm savings preferences in Step 05',
-  'savings.allocationTotal': 'savings allocations totaling 100%',
-  'savings.k401Unavailable': 'remove 401(k) allocation or enable 401(k)',
-  'savings.hsaIneligible': 'remove HSA allocation or choose HSA eligibility',
+  'savings.contributionRates': 'valid savings slider settings',
+  'savings.k401': 'valid 401(k) slider setting',
+  'savings.hsa': 'valid HSA slider setting',
+  'savings.roth': 'valid Roth IRA slider setting',
+  'savings.brokerage': 'valid brokerage slider setting',
+  'savings.k401Unavailable': 'set 401(k) to $0 or enable 401(k) access',
+  'savings.hsaIneligible': 'set HSA to $0 or choose HSA eligibility',
   'wealth.employerContributionRate': 'employer retirement contribution',
   'wealth.investmentReturnRate': 'investment-return assumption',
   'wealth.emergencyMonths': 'emergency-reserve target',
@@ -1349,7 +1370,10 @@ function renderProjectionAudit(school, bundle) {
       <p><b>Federal rate years:</b> the 2026–27 federal interest rates are treated as exact for that award year. Later award-year rates are unknown and use the current rates only as editable planning proxies.</p>
       ${result.loan?.interest?.privateInterestPaidInSchool > 0 ? `<p class="audit-warning"><b>Private in-school cash outflow:</b> ${formatMoneyOrDash(result.loan.interest.privateInterestPaidInSchool)} of private-loan interest is modeled as paid before graduation. CollegeTab reports that cash outflow but does not guess whether the student or family paid it, so it is not silently deducted from either party's post-graduation assets.</p>` : ''}
       <p><b>Take-home:</b> gross wages − employee retirement contribution − modeled federal income tax − state/local income tax − FICA. Married-filing-jointly currently assumes the modeled salary is the household's only wage income.</p>
-      <p><b>Retirement + wealth:</b> employee deferrals and the flat employer-contribution assumption are capped by modeled qualified-plan limits. Yearly surplus first covers any cash deficit, then fills the emergency reserve target, then enters taxable investments. Retirement and investments use the selected nominal return.</p>
+      <p><b>Sectional living-cost inflation:</b> housing, food, transportation, healthcare, entertainment, charity, and miscellaneous allowances each compound by their own saved annual rate. The starting values are editable July 2026 BLS category-CPI planning proxies, not forecasts. Entertainment and charity inflate with the monthly budget but remain outside the emergency-reserve target.</p>
+      <p><b>401(k) first:</b> the employee's traditional 401(k) slider is applied before income taxes. Its annual maximum is the lower of the year-specific legal limit and the tax-aware amount that still covers modeled expenses and required student-loan payments. Federal and eligible state income taxes are then recalculated; FICA is not reduced.</p>
+      <p><b>Dynamic post-tax sliders:</b> after any cash deficit and emergency-reserve gap, HSA, Roth IRA, and taxable-brokerage sliders use sequential dollar maximums based on the remaining cash and year-specific account limits. Cash/HYSA receives every unassigned dollar. HSA cash-flow tax benefits are not credited, so that contribution remains conservative.</p>
+      <p><b>Retirement + wealth:</b> employee deferrals and the flat employer-contribution assumption are capped by modeled qualified-plan limits. Retirement and investments use the selected nominal return.</p>
       <p><b>Net worth:</b> retirement + taxable investments + emergency savings − cash deficit − remaining modeled student-loan balance.</p>
       <p><b>Family contribution opportunity cost:</b> each family contribution is grown from its modeled payment timing to the target age at the selected investment return. It is a counterfactual future value, not another cost charged by CollegeTab.</p>
       <p><b>Not included:</b> federal/state tax credits, itemized deductions, special deductions, spouse wages, investment tax drag, Social Security benefits, home equity/mortgage amortization, the Repayment Assistance Plan (RAP), forgiveness, temporary Auto Pay rate reductions, grandfathered federal-loan exceptions, exact lender variable-rate paths, or exact disbursement dates.</p>
@@ -1452,7 +1476,10 @@ function scenarioSchoolOptions(selectedId) {
   return plan.schools.length ? plan.schools.map(s=>`<option value="${escapeHtml(s.id)}"${s.id===selectedId?' selected':''}>${escapeHtml(s.name)}</option>`).join('') : '<option value="">Add a college first</option>';
 }
 function budgetValuesFromForm(form) {
-  return Object.fromEntries(['food','housing','transportation','healthcare','entertainment','charity','misc'].map(key=>[key, nullableMoney(form.elements[key].value,100000)]));
+  return Object.fromEntries(BUDGET_CATEGORIES.map(key=>[key, nullableMoney(form.elements[key].value,100000)]));
+}
+function budgetInflationValuesFromForm(form) {
+  return Object.fromEntries(BUDGET_CATEGORIES.map(key=>[key, nullableNumber(form.elements[`${key}InflationRate`]?.value,0,20,2)]));
 }
 function updateBudgetTotal() {
   const form=$('#budgetForm'); if(!form)return;
@@ -1463,30 +1490,72 @@ function renderBudget() {
   ensureProjectionSelection();
   const select=$('#budgetSchoolSelect'); if(select){select.innerHTML=scenarioSchoolOptions(projectionSchoolId); select.disabled=!plan.schools.length;}
   const school=plan.schools.find(s=>s.id===projectionSchoolId); const form=$('#budgetForm'); if(!form)return;
-  const scenario=school?.scenario||normalizeScenario({}); const preset=window.CollegeTabCostOfLiving2026?.monthlyPreset?.(scenario.workState);
+  const scenario=school?.scenario||normalizeScenario({}); const preset=window.CollegeTabCostOfLiving2026?.monthlyPreset?.(scenario.workState); const inflationPreset=window.CollegeTabCostOfLiving2026?.inflationPreset?.();
   const hasSaved=budgetComplete(school); const values=hasSaved?scenario.budget:(preset?.categories||{});
-  ['food','housing','transportation','healthcare','entertainment','charity','misc'].forEach(key=>setFormElementValue(form,key,values[key]));
+  BUDGET_CATEGORIES.forEach(key=>{ setFormElementValue(form,key,values[key]); setFormElementValue(form,`${key}InflationRate`,scenario.budget.inflationRates[key]); });
   const stateName=window.CollegeTabStateTaxData2026?.STATES?.[scenario.workState]?.name;
   const title=$('#budgetPresetTitle'), source=$('#budgetPresetSource'), btn=$('#applyStateBudgetPreset');
   if(title) title.textContent=preset?`${stateName?.toUpperCase()||scenario.workState} · ${formatMoneyOrDash(preset.monthlyTotal)} / MONTH`:'SET A WORK STATE IN STEP 03';
   if(source) source.textContent=preset?`Planning preset: BLS 2024 one-person spending translated with Q1 2026 MERIC/C2ER ${stateName||scenario.workState} cost indices. Edit every amount.`:'CollegeTab needs the expected work state before it can create a geographic preset.';
   if(btn) btn.disabled=!preset;
+  const inflationSource=$('#inflationPresetSource'), inflationBtn=$('#applyInflationPreset');
+  if(inflationSource) inflationSource.textContent=inflationPreset?'July 2026 BLS 12-month category CPI changes. Transportation and healthcare use services measures; charity and misc use the 2.5% core fallback. Edit any rate.':'Editable annual planning assumptions; the general model rate is used only if a category rate is unavailable.';
+  if(inflationBtn) inflationBtn.disabled=!inflationPreset;
   const msg=$('#budgetFormMessage'); if(msg) msg.textContent=hasSaved && scenario.budget.sourceState && scenario.budget.sourceState!==scenario.workState ? 'Your saved budget was created for a different work state. Review it or apply the new state preset.' : (hasSaved?'Saved custom monthly budget.':'State preset loaded as a starting point. Save it or edit it first.');
   updateBudgetTotal();
 }
-function allocationTotalFromForm(form) {
-  return ['allocation401k','allocationHsa','allocationRoth','allocationBrokerage','allocationCash'].reduce((sum,key)=>sum+(Number(form.elements[key]?.value)||0),0);
+const CONTRIBUTION_SLIDERS = Object.freeze({ k401:'contribution401k', hsa:'contributionHsa', roth:'contributionRoth', brokerage:'contributionBrokerage' });
+function contributionRatesFromSliders(form) {
+  return Object.fromEntries(Object.entries(CONTRIBUTION_SLIDERS).map(([key,name])=>{
+    const input=form.elements[name]; const maximum=Number(input?.max)||0; const value=Number(input?.value)||0;
+    const stored=Number(input?.dataset?.rate);
+    return [key, nullableNumber(Number.isFinite(stored)?stored:(maximum>0?value/maximum*100:0),0,100,2)??0];
+  }));
 }
-function updateAllocationTotal() {
-  const form=$('#savingsForm'); if(!form)return; const total=allocationTotalFromForm(form); const out=$('#allocationTotal'); if(out)out.textContent=`${Math.round(total*10)/10}%`; const err=$('#allocationError'); if(err)err.textContent=Math.abs(total-100)<0.01?'':`Allocation must total 100%. Current total: ${Math.round(total*10)/10}%.`;
+function projectionFromSavingsForm(form, contributionRates, confirmed=true) {
+  return normalizeProjection({...plan.projection,
+    emergencyMonths:form.elements.emergencyMonths.value,cashHysaRate:form.elements.cashHysaRate.value,
+    employerContributionRate:form.elements.employerContributionRate.value,investmentReturnRate:form.elements.investmentReturnRate.value,
+    k401Available:form.elements.k401Available.checked,hsaCoverage:form.elements.hsaCoverage.value,contributionRates,
+    startingEmergencySavings:form.elements.startingEmergencySavings.value,startingCash:form.elements.startingCash.value,
+    starting401k:form.elements.starting401k.value,startingHsa:form.elements.startingHsa.value,startingRoth:form.elements.startingRoth.value,
+    startingBrokerage:form.elements.startingBrokerage.value,savingsConfirmed:confirmed
+  });
+}
+function setContributionSlider(form, key, capacity) {
+  const name=CONTRIBUTION_SLIDERS[key], input=form.elements[name]; if(!input)return;
+  const maximum=Math.max(0,Math.floor(Number(capacity?.maxima?.[key])||0));
+  const selected=Math.max(0,Math.min(maximum,Math.round(Number(capacity?.selected?.[key])||0)));
+  input.max=String(maximum); input.value=String(selected); input.disabled=maximum<=0;
+  const valueNode=$(`#${name}Value`), maxNode=$(`#${name}Max`);
+  if(valueNode)valueNode.textContent=formatMoneyOrDash(selected);
+  if(maxNode)maxNode.textContent=key==='k401'?formatMoneyOrDash(maximum):`MAX ${formatMoneyOrDash(maximum)}`;
+}
+function updateSavingsCapacityPreview() {
+  const form=$('#savingsForm'); if(!form)return;
+  const school=plan.schools.find(s=>s.id===projectionSchoolId); const message=$('#savingsCapacityMessage');
+  let rates=contributionRatesFromSliders(form);
+  if(!form.elements.k401Available.checked){rates.k401=0; form.elements.contribution401k.dataset.rate='0';}
+  if(form.elements.hsaCoverage.value==='none'){rates.hsa=0; form.elements.contributionHsa.dataset.rate='0';}
+  const previewProjection=projectionFromSavingsForm(form,rates,true);
+  const built=school?scenarioInputForSchool(school,previewProjection):null;
+  const result=built?window.CollegeTabFinancialEngine?.projectScenario?.(built.input):null;
+  const capacity=result?.ready?result.firstYear?.savingsCapacity:null;
+  for(const key of Object.keys(CONTRIBUTION_SLIDERS)) setContributionSlider(form,key,capacity);
+  const postTax=$('#postTaxSavingsAvailable'), cash=$('#contributionCashValue'), help=$('#contribution401kHelp');
+  if(postTax)postTax.textContent=capacity?formatMoneyOrDash(capacity.postTaxAvailable):'—';
+  if(cash)cash.textContent=capacity?formatMoneyOrDash(capacity.selected.cash):'—';
+  if(help)help.textContent=capacity?`Selected ${formatMoneyOrDash(capacity.selected.k401)} annually. The maximum already reflects modeled taxes, required expenses, loan payments, and the year-specific 401(k) limit.`:'Complete the college, career, loan, and monthly-budget steps to calculate a tax-aware maximum.';
+  if(message)message.textContent=capacity?'DYNAMIC MAXIMUMS UPDATED · SAVED POSITIONS SCALE AGAINST EACH FUTURE YEAR’S AFFORDABLE AND LEGAL LIMITS.':(result?`STILL NEEDED: ${scenarioMissingCopy(result,4).toUpperCase()}.`:'CHOOSE A COMPLETE COLLEGE PATH TO CALCULATE SAVINGS CAPACITY.');
 }
 function renderSavings() {
   ensureProjectionSelection();
   const select=$('#savingsSchoolSelect'); if(select){select.innerHTML=scenarioSchoolOptions(projectionSchoolId); select.disabled=!plan.schools.length;}
   const form=$('#savingsForm'); if(!form)return; const p=plan.projection||normalizeProjection({});
-  for(const [name,value] of Object.entries({ emergencyMonths:p.emergencyMonths,cashHysaRate:p.cashHysaRate,employerContributionRate:p.employerContributionRate,investmentReturnRate:p.investmentReturnRate,hsaCoverage:p.hsaCoverage,allocation401k:p.allocations.k401,allocationHsa:p.allocations.hsa,allocationRoth:p.allocations.roth,allocationBrokerage:p.allocations.brokerage,allocationCash:p.allocations.cash,startingEmergencySavings:p.startingEmergencySavings,startingCash:p.startingCash,starting401k:p.starting401k,startingHsa:p.startingHsa,startingRoth:p.startingRoth,startingBrokerage:p.startingBrokerage })) setFormElementValue(form,name,value);
+  for(const [name,value] of Object.entries({ emergencyMonths:p.emergencyMonths,cashHysaRate:p.cashHysaRate,employerContributionRate:p.employerContributionRate,investmentReturnRate:p.investmentReturnRate,hsaCoverage:p.hsaCoverage,startingEmergencySavings:p.startingEmergencySavings,startingCash:p.startingCash,starting401k:p.starting401k,startingHsa:p.startingHsa,startingRoth:p.startingRoth,startingBrokerage:p.startingBrokerage })) setFormElementValue(form,name,value);
   if(document.activeElement!==form.elements.k401Available) form.elements.k401Available.checked=p.k401Available;
-  updateAllocationTotal();
+  for(const [key,name] of Object.entries(CONTRIBUTION_SLIDERS)) form.elements[name].dataset.rate=String(p.contributionRates[key]);
+  updateSavingsCapacityPreview();
 }
 
 function renderAll() {
@@ -2045,10 +2114,11 @@ $('#budgetSchoolSelect')?.addEventListener('change', event=>{ if(plan.schools.so
 $('#savingsSchoolSelect')?.addEventListener('change', event=>{ if(plan.schools.some(s=>s.id===event.target.value)) projectionSchoolId=event.target.value; renderBudget(); renderSavings(); renderProjection(); });
 $('#budgetForm')?.addEventListener('input', updateBudgetTotal);
 $('#applyStateBudgetPreset')?.addEventListener('click', ()=>{ const school=plan.schools.find(s=>s.id===projectionSchoolId); const preset=window.CollegeTabCostOfLiving2026?.monthlyPreset?.(school?.scenario?.workState); const form=$('#budgetForm'); if(!preset||!form)return; Object.entries(preset.categories).forEach(([k,v])=>{if(form.elements[k])form.elements[k].value=v;}); updateBudgetTotal(); showToast('State monthly preset restored. Review it, then save.'); });
-$('#budgetForm')?.addEventListener('submit', event=>{ event.preventDefault(); const form=event.currentTarget; if(!form.reportValidity())return; const school=plan.schools.find(s=>s.id===projectionSchoolId); if(!school){showToast('Choose a college path first.');return;} const budget=budgetValuesFromForm(form); if(!Object.values(budget).every(Number.isFinite)){showToast('Complete every monthly budget category, including explicit $0 values.');return;} school.scenario=normalizeScenario({...school.scenario,budget:{...budget,source:'custom-or-confirmed-preset',sourceState:school.scenario.workState}}); persistPlan({archive:true}); showToast('Monthly budget saved.'); setRoute('savings',{pushHash:true}); });
-$('#savingsForm')?.addEventListener('input', updateAllocationTotal);
-$('#savingsForm')?.addEventListener('change', updateAllocationTotal);
-$('#savingsForm')?.addEventListener('submit', event=>{ event.preventDefault(); const form=event.currentTarget; if(!form.reportValidity())return; const total=allocationTotalFromForm(form); if(Math.abs(total-100)>0.01){showToast('Savings allocations must total 100%.');return;} if(!form.elements.k401Available.checked && Number(form.elements.allocation401k.value)>0){showToast('401(k) allocation must be 0% when no 401(k) is available.');return;} if(form.elements.hsaCoverage.value==='none' && Number(form.elements.allocationHsa.value)>0){showToast('HSA allocation must be 0% when the scenario is not HSA-eligible.');return;} plan.projection=normalizeProjection({...plan.projection,emergencyMonths:form.elements.emergencyMonths.value,cashHysaRate:form.elements.cashHysaRate.value,employerContributionRate:form.elements.employerContributionRate.value,investmentReturnRate:form.elements.investmentReturnRate.value,k401Available:form.elements.k401Available.checked,hsaCoverage:form.elements.hsaCoverage.value,allocations:{k401:form.elements.allocation401k.value,hsa:form.elements.allocationHsa.value,roth:form.elements.allocationRoth.value,brokerage:form.elements.allocationBrokerage.value,cash:form.elements.allocationCash.value},startingEmergencySavings:form.elements.startingEmergencySavings.value,startingCash:form.elements.startingCash.value,starting401k:form.elements.starting401k.value,startingHsa:form.elements.startingHsa.value,startingRoth:form.elements.startingRoth.value,startingBrokerage:form.elements.startingBrokerage.value,savingsConfirmed:true}); const saved=persistPlan({archive:true}); const result=calculateScenarioForSchool(plan.schools.find(s=>s.id===projectionSchoolId)).result; showToast(result?.ready?(saved?`Scenario calculated · ${result.fingerprint}`:'Scenario calculated for this session.'):`Saved. Still needed: ${scenarioMissingCopy(result,3)}.`); renderProjection(); setRoute('compare',{pushHash:true}); });
+$('#applyInflationPreset')?.addEventListener('click', ()=>{ const preset=window.CollegeTabCostOfLiving2026?.inflationPreset?.(); const form=$('#budgetForm'); if(!preset||!form)return; Object.entries(preset.rates).forEach(([key,value])=>{const input=form.elements[`${key}InflationRate`];if(input)input.value=value;}); showToast('BLS sectional inflation preset restored. Review it, then save.'); });
+$('#budgetForm')?.addEventListener('submit', event=>{ event.preventDefault(); const form=event.currentTarget; if(!form.reportValidity())return; const school=plan.schools.find(s=>s.id===projectionSchoolId); if(!school){showToast('Choose a college path first.');return;} const budget=budgetValuesFromForm(form); const inflationRates=budgetInflationValuesFromForm(form); if(!Object.values(budget).every(Number.isFinite)){showToast('Complete every monthly budget category, including explicit $0 values.');return;} if(!Object.values(inflationRates).every(Number.isFinite)){showToast('Complete every sectional inflation rate, including explicit 0% values.');return;} school.scenario=normalizeScenario({...school.scenario,budget:{...budget,inflationRates,inflationSource:'custom-or-confirmed-bls-preset',source:'custom-or-confirmed-preset',sourceState:school.scenario.workState}}); persistPlan({archive:true}); showToast('Monthly budget + sectional inflation saved.'); setRoute('savings',{pushHash:true}); });
+$('#savingsForm')?.addEventListener('input', event=>{ const slider=event.target.closest?.('input[type="range"][name^="contribution"]'); if(slider){const maximum=Number(slider.max)||0; slider.dataset.rate=String(maximum>0?Math.max(0,Math.min(100,(Number(slider.value)||0)/maximum*100)):0);} updateSavingsCapacityPreview(); });
+$('#savingsForm')?.addEventListener('change', event=>{ const form=event.currentTarget; if(event.target===form.elements.k401Available && !form.elements.k401Available.checked)form.elements.contribution401k.dataset.rate='0'; if(event.target===form.elements.hsaCoverage && form.elements.hsaCoverage.value==='none')form.elements.contributionHsa.dataset.rate='0'; updateSavingsCapacityPreview(); });
+$('#savingsForm')?.addEventListener('submit', event=>{ event.preventDefault(); const form=event.currentTarget; if(!form.reportValidity())return; const contributionRates=contributionRatesFromSliders(form); if(!form.elements.k401Available.checked && contributionRates.k401>0){showToast('Set the 401(k) slider to $0 or enable 401(k) access.');return;} if(form.elements.hsaCoverage.value==='none' && contributionRates.hsa>0){showToast('Set the HSA slider to $0 or choose HSA eligibility.');return;} plan.projection=projectionFromSavingsForm(form,contributionRates,true); const saved=persistPlan({archive:true}); const result=calculateScenarioForSchool(plan.schools.find(s=>s.id===projectionSchoolId)).result; showToast(result?.ready?(saved?`Scenario calculated · ${result.fingerprint}`:'Scenario calculated for this session.'):`Saved. Still needed: ${scenarioMissingCopy(result,3)}.`); renderProjection(); setRoute('compare',{pushHash:true}); });
 // Local prototype plan management.
 $('#newPlanForm')?.addEventListener('submit', event => {
   event.preventDefault();

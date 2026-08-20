@@ -436,8 +436,7 @@
               <label><span class="fl-label">Target age</span><input class="fl-input" name="targetAge" type="number" min="17" max="100" step="1"></label>
               <label><span class="fl-label">Tax filing status</span><select class="fl-select" name="filingStatus"><option value="">Choose status</option><option value="single">Single</option><option value="married_joint">Married filing jointly</option></select><small>For married filing jointly, this scenario currently treats the modeled salary as the household's only wage income. Use Single unless that assumption fits.</small></label>
               <label><span class="fl-label">Salary growth / yr</span><div class="suffix-input"><input class="fl-input" name="salaryGrowthRate" type="number" min="-50" max="50" step="0.1"><span>%</span></div></label>
-              <label><span class="fl-label">General inflation / yr</span><div class="suffix-input"><input class="fl-input" name="inflationRate" type="number" min="0" max="20" step="0.1"><span>%</span></div></label>
-              <label><span class="fl-label">Employee retirement</span><div class="suffix-input"><input class="fl-input" name="retirementRate" type="number" min="0" max="100" step="0.5"><span>%</span></div></label>
+              <label><span class="fl-label">Tax-policy index / general fallback</span><div class="suffix-input"><input class="fl-input" name="inflationRate" type="number" min="0" max="20" step="0.1"><span>%</span></div><small>Indexes future tax thresholds and fills any unavailable category rate. Living-cost rates are set separately in Step 04.</small></label>
               <label><span class="fl-label">Employer retirement contribution</span><div class="suffix-input"><input class="fl-input" name="employerContributionRate" type="number" min="0" max="100" step="0.5"><span>%</span></div><small>Modeled as a flat contribution rate and capped by applicable qualified-plan limits.</small></label>
               <label><span class="fl-label">Investment return / yr</span><div class="suffix-input"><input class="fl-input" name="investmentReturnRate" type="number" min="-50" max="100" step="0.1"><span>%</span></div><small>Nominal scenario return; not guaranteed.</small></label>
               <label><span class="fl-label">Emergency reserve target</span><div class="suffix-input"><input class="fl-input" name="emergencyMonths" type="number" min="0" max="24" step="0.5"><span>MO</span></div></label>
@@ -504,7 +503,7 @@
             <div class="scenario-metrics">
               <article class="fl-surface--lime"><span class="fl-mono">Projected college cost</span><strong id="projectionTotalCost">—</strong><small>Across modeled attendance years.</small></article>
               <article class="fl-surface--coral"><span class="fl-mono">Student debt at graduation</span><strong id="projectionDebt">—</strong><small>Federal + private student debt. Parent PLUS is separate.</small></article>
-              <article class="fl-surface--blue"><span class="fl-mono">First-year monthly take-home</span><strong id="projectionTakeHome">—</strong><small>After modeled federal/state/FICA + employee retirement.</small></article>
+              <article class="fl-surface--blue"><span class="fl-mono">First-year monthly take-home</span><strong id="projectionTakeHome">—</strong><small>After modeled federal/state/FICA + selected pre-tax 401(k).</small></article>
               <article class="fl-surface--ink"><span class="fl-mono">Debt-free age</span><strong id="projectionDebtFreeAge">—</strong><small>Tiered Standard federal baseline + entered private-loan terms.</small></article>
               <article><span class="fl-mono" id="projectionNetWorthKicker">Net worth at target age</span><strong id="projectionNetWorth">—</strong><small>Assets less modeled debt/cash deficit.</small></article>
               <article><span class="fl-mono">Family contribution future value</span><strong id="projectionFamilyOpportunity">—</strong><small>What modeled family contributions could have grown to at the selected investment return—not an additional bill.</small></article>
@@ -548,6 +547,20 @@
             <label class="budget-field"><span class="fl-label">Charity</span><div class="money-month"><b>$</b><input class="fl-input" name="charity" type="number" min="0" max="100000" step="1" required><span>/ MO</span></div></label>
             <label class="budget-field"><span class="fl-label">Misc.</span><div class="money-month"><b>$</b><input class="fl-input" name="misc" type="number" min="0" max="100000" step="1" required><span>/ MO</span></div></label>
           </div>
+          <details class="budget-inflation" open>
+            <summary><span><span class="fl-mono">SECTIONAL INFLATION</span><strong>DIFFERENT COSTS. DIFFERENT RATES.</strong></span><span>EDIT RATES ↓</span></summary>
+            <div class="budget-inflation__intro"><p id="inflationPresetSource">Editable annual planning assumptions. Each monthly category compounds independently.</p><div class="budget-inflation__actions"><a class="fl-button fl-button--quiet" href="https://www.bls.gov/news.release/cpi.t01.htm" target="_blank" rel="noreferrer"><span>BLS source table</span><span class="fl-button__arrow">↗</span></a><button class="fl-button fl-button--quiet" type="button" id="applyInflationPreset"><span>Use BLS CPI preset</span><span class="fl-button__arrow">↺</span></button></div></div>
+            <div class="inflation-grid">
+              <label class="inflation-field"><span class="fl-label">Housing · shelter</span><div class="rate-year"><input class="fl-input" name="housingInflationRate" type="number" min="0" max="20" step="0.1" required><span>% / YR</span></div></label>
+              <label class="inflation-field"><span class="fl-label">Food</span><div class="rate-year"><input class="fl-input" name="foodInflationRate" type="number" min="0" max="20" step="0.1" required><span>% / YR</span></div></label>
+              <label class="inflation-field"><span class="fl-label">Transportation · services</span><div class="rate-year"><input class="fl-input" name="transportationInflationRate" type="number" min="0" max="20" step="0.1" required><span>% / YR</span></div></label>
+              <label class="inflation-field"><span class="fl-label">Healthcare · medical services</span><div class="rate-year"><input class="fl-input" name="healthcareInflationRate" type="number" min="0" max="20" step="0.1" required><span>% / YR</span></div></label>
+              <label class="inflation-field"><span class="fl-label">Entertainment · recreation</span><div class="rate-year"><input class="fl-input" name="entertainmentInflationRate" type="number" min="0" max="20" step="0.1" required><span>% / YR</span></div></label>
+              <label class="inflation-field"><span class="fl-label">Charity · core fallback</span><div class="rate-year"><input class="fl-input" name="charityInflationRate" type="number" min="0" max="20" step="0.1" required><span>% / YR</span></div></label>
+              <label class="inflation-field"><span class="fl-label">Misc. · core fallback</span><div class="rate-year"><input class="fl-input" name="miscInflationRate" type="number" min="0" max="20" step="0.1" required><span>% / YR</span></div></label>
+            </div>
+            <p class="inflation-note"><b>Reserve rule:</b> housing, food, transportation, healthcare, misc, and required loan payments set the annual emergency target. Entertainment and charity still inflate, but do not raise that target.</p>
+          </details>
           <div class="budget-total"><span><small class="fl-mono">MONTHLY ALLOWANCE TOTAL</small><strong id="budgetMonthlyTotal">—</strong></span><p>Anything left after taxes, required loan payments and these allowances moves into CollegeTab's savings workflow.</p></div>
           <p class="form-message" id="budgetFormMessage" aria-live="polite"></p>
           <div class="form-actions"><button class="fl-button fl-button--blue" type="submit"><span>Save + continue to savings</span><span class="fl-button__arrow">→</span></button></div>
@@ -570,10 +583,10 @@
         <details class="savings-explainer">
           <summary><span>How does our savings model work?</span><span>OPEN →</span></summary>
           <div>
-            <p><b>1. Cover the month.</b><br>Taxes, required student-loan payments and your monthly allowances come first.</p>
-            <p><b>2. Fill the emergency fund.</b><br>Available savings first fill a dedicated emergency HYSA up to the number of months you choose.</p>
-            <p><b>3. Reprice it every year.</b><br>Monthly essentials inflate over time, so CollegeTab recalculates the reserve target annually and tops it back up when necessary.</p>
-            <p><b>4. Allocate the rest.</b><br>Once the emergency fund is full, the remaining savings follow your 401(k), HSA, Roth IRA, brokerage and cash/HYSA preferences, subject to modeled account limits and eligibility.</p>
+            <p><b>1. Choose pre-tax 401(k).</b><br>The maximum is the lower of the annual legal limit and what still lets modeled take-home cover expenses and required loan payments.</p>
+            <p><b>2. Recalculate taxes.</b><br>CollegeTab deducts the selected traditional 401(k) contribution before federal and eligible state income-tax calculations. FICA still applies.</p>
+            <p><b>3. Protect the emergency fund.</b><br>Post-tax cash fills the annually repriced emergency HYSA target before optional post-tax destinations.</p>
+            <p><b>4. Use the remaining dollars.</b><br>HSA, Roth IRA and brokerage sliders receive dynamic annual-dollar maximums. Cash/HYSA automatically receives anything left.</p>
           </div>
         </details>
         <form class="savings-panel" id="savingsForm">
@@ -591,7 +604,7 @@
               <label><span class="fl-label">Employer retirement contribution</span><div class="percent-input"><input class="fl-input" name="employerContributionRate" type="number" min="0" max="100" step="0.1" required><span>%</span></div></label>
               <label><span class="fl-label">Investment return assumption</span><div class="percent-input"><input class="fl-input" name="investmentReturnRate" type="number" min="-50" max="100" step="0.1" required><span>%</span></div><small>Nominal planning assumption; not guaranteed.</small></label>
             </section>
-            <section class="savings-block fl-surface--blue">
+            <section class="savings-block savings-block--accent">
               <span class="fl-mono">03 / STARTING BALANCES</span><h3>START WHERE YOU ARE.</h3>
               <label><span class="fl-label">Bank cash</span><div class="money-input"><span>$</span><input class="fl-input" name="startingCash" type="number" min="0" max="10000000" step="1" required></div></label>
               <label><span class="fl-label">401(k)</span><div class="money-input"><span>$</span><input class="fl-input" name="starting401k" type="number" min="0" max="10000000" step="1" required></div></label>
@@ -600,19 +613,21 @@
               <label><span class="fl-label">Brokerage</span><div class="money-input"><span>$</span><input class="fl-input" name="startingBrokerage" type="number" min="0" max="10000000" step="1" required></div></label>
             </section>
           </div>
-          <div class="allocation-panel">
-            <div class="allocation-head"><div><span class="fl-mono">AFTER THE EMERGENCY FUND</span><h3>ALLOCATE EVERY EXTRA DOLLAR.</h3></div><strong id="allocationTotal">100%</strong></div>
-            <p>Percentages must total 100%. CollegeTab applies account limits and routes legal/eligibility overflow to taxable brokerage instead of dropping it.</p>
-            <div class="allocation-grid">
-              <label><span class="fl-label">401(k)</span><div class="percent-input"><input class="fl-input" name="allocation401k" type="number" min="0" max="100" step="0.1" required><span>%</span></div></label>
-              <label><span class="fl-label">HSA</span><div class="percent-input"><input class="fl-input" name="allocationHsa" type="number" min="0" max="100" step="0.1" required><span>%</span></div></label>
-              <label><span class="fl-label">Roth IRA</span><div class="percent-input"><input class="fl-input" name="allocationRoth" type="number" min="0" max="100" step="0.1" required><span>%</span></div></label>
-              <label><span class="fl-label">Brokerage</span><div class="percent-input"><input class="fl-input" name="allocationBrokerage" type="number" min="0" max="100" step="0.1" required><span>%</span></div></label>
-              <label><span class="fl-label">Cash / HYSA</span><div class="percent-input"><input class="fl-input" name="allocationCash" type="number" min="0" max="100" step="0.1" required><span>%</span></div></label>
+          <section class="contribution-stage contribution-stage--pretax">
+            <div class="contribution-stage__head"><div><span class="fl-mono">01 / PRE-TAX DECISION</span><h3>401(K) COMES FIRST.</h3><p>Choose an annual traditional 401(k) contribution. This changes taxable income, so CollegeTab recalculates taxes before finding the dollars available for every later step.</p></div><div class="capacity-number"><span class="fl-mono">AFFORDABLE + LEGAL MAX</span><strong id="contribution401kMax">—</strong></div></div>
+            <label class="contribution-slider" for="contribution401k"><span><b>Your annual 401(k) contribution</b><output id="contribution401kValue" for="contribution401k">$0</output></span><input id="contribution401k" name="contribution401k" type="range" min="0" max="0" step="100" value="0" required><small id="contribution401kHelp">Complete the prior steps to calculate a tax-aware maximum.</small></label>
+          </section>
+          <section class="contribution-stage contribution-stage--posttax">
+            <div class="contribution-stage__head"><div><span class="fl-mono">02 / POST-TAX DOLLARS</span><h3>THEN DIRECT THE REST.</h3><p>These maximums update from left to right after the selected 401(k), taxes, required spending, loan payments, and emergency-fund top-up.</p></div><div class="capacity-number"><span class="fl-mono">AVAILABLE AFTER RESERVE</span><strong id="postTaxSavingsAvailable">—</strong></div></div>
+            <div class="dynamic-slider-grid">
+              <label class="contribution-slider" for="contributionHsa"><span><b>HSA</b><output id="contributionHsaValue" for="contributionHsa">$0</output></span><input id="contributionHsa" name="contributionHsa" type="range" min="0" max="0" step="100" value="0" required><small>Limited by eligibility, the annual HSA limit, and remaining dollars. Modeled conservatively as a post-tax cash-flow contribution.</small><em id="contributionHsaMax">MAX —</em></label>
+              <label class="contribution-slider" for="contributionRoth"><span><b>Roth IRA</b><output id="contributionRothValue" for="contributionRoth">$0</output></span><input id="contributionRoth" name="contributionRoth" type="range" min="0" max="0" step="100" value="0" required><small>Limited by the year-specific IRA limit, modeled income phaseout, and dollars left after HSA.</small><em id="contributionRothMax">MAX —</em></label>
+              <label class="contribution-slider" for="contributionBrokerage"><span><b>Taxable brokerage</b><output id="contributionBrokerageValue" for="contributionBrokerage">$0</output></span><input id="contributionBrokerage" name="contributionBrokerage" type="range" min="0" max="0" step="100" value="0" required><small>Uses any remaining investable dollars after HSA and Roth IRA.</small><em id="contributionBrokerageMax">MAX —</em></label>
+              <div class="cash-remainder"><span class="fl-mono">CASH / HYSA REMAINDER</span><strong id="contributionCashValue">—</strong><small>Every unassigned post-tax dollar stays in cash/HYSA; the model never drops surplus.</small></div>
             </div>
-            <div class="allocation-error" id="allocationError" aria-live="polite"></div>
-          </div>
-          <p class="assumption-footnote">CollegeTab models the emergency reserve separately from user-directed cash. The reserve stops growing once it reaches its inflation-adjusted target; additional savings follow the allocation above.</p>
+            <div class="capacity-message" id="savingsCapacityMessage" aria-live="polite"></div>
+          </section>
+          <p class="assumption-footnote">The emergency reserve is separate from the cash/HYSA remainder. Saved slider positions represent the same share of each future year's dynamic maximum, so changing salaries, expenses, taxes, account limits, or another earlier slider automatically updates later dollar amounts.</p>
           <div class="form-actions"><button class="fl-button fl-button--lime" type="submit"><span>Save + continue to compare</span><span class="fl-button__arrow">→</span></button></div>
         </form>
       </section>

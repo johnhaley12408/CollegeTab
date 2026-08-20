@@ -20,13 +20,15 @@ Then open `http://localhost:8080/`.
 - `college-data.js` — canonical college data adapter, College Scorecard/IPEDS enrichment, and provenance
 - `college-cost-math.js` — pure tested college-cost calculations
 - `state-tax-data-2026.js` — 50 states + DC 2026 wage-income planning baseline
-- `financial-engine.js` — standalone deterministic financial engine; no DOM/UI calculations
+- `financial-engine.js` — standalone deterministic financial engine with category-specific living-cost inflation; no DOM/UI calculations
 - `FINANCIAL_ENGINE.md` — formulas, assumptions, sources, and limitations for Steps 6 + 7
 - `COLLEGE_COST_DATA.md` — college-cost/data architecture and rules
 - `data/college-record.schema.json` — canonical institution record schema
 - `scripts/build-ipeds-directory.mjs` — official IPEDS Directory normalizer
 - `QA_STEPS_3_4.md` — prior college workflow/data review
 - `QA_STEPS_6_7.md` — required logic → aesthetic → functionality review for the financial engine and scenario experience
+- `QA_SECTIONAL_INFLATION.md` — required logic → aesthetic → functionality review for category-specific inflation
+- `QA_DYNAMIC_SAVINGS.md` — required logic → aesthetic → functionality review for tax-aware contribution sliders
 - `tests/run-all.sh` — deterministic validation suite
 
 ## Nationwide IPEDS directory

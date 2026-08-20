@@ -1,6 +1,7 @@
 # CollegeTab Financial Engine — Steps 6 + 7
 
-Financial engine: `2026.08.20-v5`  
+Financial engine: `2026.08.20-v7`
+
 Loan engine: `2026.08.19-loans-v3`
 
 This document defines the standalone calculation engine and the core college-scenario comparison experience. Financial math lives in `financial-engine.js`; the interface in `app.js` only assembles inputs, calls the engine, and renders outputs.
@@ -247,9 +248,18 @@ For 2026 it enforces:
 
 The employer input is deliberately named `employerContributionRate`, not “match,” because the UI models it as a simple flat percentage of eligible compensation rather than pretending to know a plan-specific matching formula.
 
-`requestedEmployee = salary × employeeRate`
+The traditional 401(k) is a separate pre-tax decision. For each year, CollegeTab first solves the largest contribution that satisfies both constraints:
 
-`employee = min(requestedEmployee, electiveDeferralLimit)`
+- it does not exceed the year-specific elective-deferral limit
+- after the contribution and its income-tax effect, modeled wages still cover taxes, the monthly budget, and required student-loan payments
+
+`affordable401Max = max(c) such that salary − c − taxes(c) − annualBudget − requiredLoanPayments ≥ 0`
+
+The saved slider position is a percentage of that dynamic maximum, while the UI displays annual dollars:
+
+`employee401 = affordable401Max × savedSliderRate`
+
+The engine then recalculates federal and state income taxes with `employee401` as a traditional pre-tax deferral. FICA wages are not reduced. A future year's slider dollar amount can therefore change as salary, expenses, loan payments, tax rules, or legal limits change.
 
 `eligibleEmployerCompensation = min(salary, compensationLimit)`
 
@@ -273,38 +283,65 @@ Monthly take-home shown in the scenario summary is:
 
 This is annualized after-tax cash flow, not a paycheck withholding estimator.
 
-## 13. Rent / home and other living expenses
+## 13. Monthly budgets and sectional inflation
 
-The current scenario accepts:
+The current scenario accepts base-year monthly amounts for housing, food, transportation, healthcare, entertainment, charity, and miscellaneous spending. Each category has its own annual inflation assumption:
 
-- annual housing cost
-- annual other living costs
+`monthlyExpense[k,t] = monthlyExpense[k,0] × (1 + categoryRate[k])^t`
 
-Each is inflated independently using the shared general inflation assumption:
+The UI starts with editable planning proxies from the U.S. Bureau of Labor Statistics July 2026 12-month CPI table:
 
-`expense[t] = expense0 × (1 + inflation)^t`
+- housing: 3.2% (shelter)
+- food: 3.0%
+- transportation: 2.9% (transportation services)
+- healthcare: 2.7% (medical care services)
+- entertainment: 2.6% (recreation)
+- charity: 2.5% (all items less food and energy fallback)
+- miscellaneous: 2.5% (all items less food and energy fallback)
 
-Housing is treated as an expense. Home equity, mortgage principal, property-tax modeling, insurance, and appreciation are not yet part of this step and are explicitly excluded from the displayed net-worth model.
+These rates are a transparent starting snapshot, not forecasts or household-specific inflation estimates. Users can edit every rate. Legacy engine inputs without an `expenses.inflationRates` value use `economy.inflationRate` as a per-category fallback. The general rate also remains the UI's future tax-policy indexing assumption.
+
+Source: [BLS CPI Table 1, July 2026](https://www.bls.gov/news.release/cpi.t01.htm).
+
+Housing remains an expense. Home equity, mortgage principal, property-tax modeling, insurance, and appreciation are not yet part of this step and are explicitly excluded from the displayed net-worth model.
 
 ## 14. Emergency savings
 
-The emergency target is based on selected months of core modeled living expenses:
+The emergency target is repriced annually from essential monthly obligations:
 
-`emergencyTarget = (annualHousing + annualOtherLiving) / 12 × emergencyMonths`
+`essentialMonthly[t] = housing[t] + food[t] + transportation[t] + healthcare[t] + misc[t] + requiredLoanPayment[t]`
+
+`emergencyTarget[t] = essentialMonthly[t] × emergencyMonths`
+
+Entertainment and charity still compound by their saved category rates and remain in total monthly spending, but they are intentionally excluded from the emergency target.
 
 Each year's available surplus follows this order:
 
-1. eliminate existing modeled cash deficit
-2. fill the emergency-savings target
-3. invest remaining surplus in taxable investments
+1. select the employee traditional 401(k) contribution from its tax-aware dynamic maximum
+2. recalculate income taxes and cover required student-loan payments plus the monthly budget
+3. eliminate any existing modeled cash deficit
+4. fill the emergency-savings target
+5. apply HSA, Roth IRA, and taxable-brokerage sliders sequentially to the remaining post-tax dollars
+6. retain every unassigned dollar as cash/HYSA
+
+The HSA, Roth IRA, and brokerage controls also display annual dollars. Each saved position is a percentage of that destination's year-specific maximum:
+
+`hsaMax = min(remainingPostTax, annualHsaLimit)`
+
+`rothMax = min(remainingAfterHsa, incomeAdjustedRothLimit)`
+
+`brokerageMax = remainingAfterRoth`
+
+HSA eligibility and legal limits are enforced, but HSA payroll tax benefits are not credited in the current cash-flow model. Treating it as post-tax cash flow is conservative and is disclosed in the UI/audit.
 
 If annual cash flow is negative:
 
-1. taxable investments are drawn down
-2. emergency savings are drawn down
-3. remaining shortfall becomes a modeled cash deficit
+1. cash is drawn down
+2. taxable brokerage investments are drawn down
+3. emergency savings are drawn down
+4. remaining shortfall becomes a modeled cash deficit
 
-Emergency savings currently receive no modeled investment return. That conservative simplification is deliberate rather than assigning a market return to cash reserves.
+Emergency savings grow by the selected cash/HYSA rate and are capped at the current year's target. Growth above that target returns to the year's savings pool.
 
 ## 15. Investment growth
 
