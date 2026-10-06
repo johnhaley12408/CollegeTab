@@ -856,7 +856,19 @@ function renderCollegeCostWorkspace() {
 }
 
 function annualFundingNeedsForModel(model) {
-  return Array.isArray(model?.rows) ? model.rows.map(row => ({
+  const financing = window.CollegeTabFinancialEngine?.projectCollegeFinancing?.({
+    annualCost: model?.annualCost,
+    annualGrowthRate: model?.growthRate,
+    baseYear: model?.projectionBaseYear,
+    startYear: model?.projectionStartYear,
+    attendanceYears: model?.validYears,
+    grantsAnnual: model?.grantsAnnual,
+    familyAnnual: model?.familyAnnual,
+    loanApr: 0,
+    interestAccruesInSchool: false,
+    graceMonths: 0
+  });
+  return Array.isArray(financing?.rows) ? financing.rows.map(row => ({
     academicYearIndex: row.academicYearIndex,
     calendarStartYear: row.calendarStartYear,
     netNeed: row.borrowedPrincipal

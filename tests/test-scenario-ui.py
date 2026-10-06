@@ -36,6 +36,10 @@ for required_copy in ['SECOND MODEL OPTIONAL', 'Your completed model does not ne
     if required_copy not in appjs: errors.append(f'compare readiness copy missing: {required_copy}')
 if 'COMPLETE BOTH MODELS TO SEE THE LONG-RANGE DIFFERENCE.' in appjs:
     errors.append('compare view still mislabels an optional second model as required setup')
+if 'CollegeTabFinancialEngine?.projectCollegeFinancing?.({' not in appjs:
+    errors.append('annual loan planner must derive funding rows from the financial engine')
+if 'Array.isArray(model?.rows)' in appjs:
+    errors.append('annual loan planner still reads nonexistent calculateSchoolModel rows')
 
 if 'data-rate-field="privateApr"' not in appjs: errors.append('year-specific private APR input missing from annual loan pricing table')
 if 'data-rate-field="privateFeeRate"' not in appjs: errors.append('year-specific private fee input missing from annual loan pricing table')
