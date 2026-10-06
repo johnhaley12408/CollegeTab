@@ -478,7 +478,9 @@ function readiness() {
   const careerDone = plan.schools.some(careerLoansComplete);
   const budgetDone = plan.schools.some(school => careerLoansComplete(school) && budgetComplete(school));
   const savingsDone = savingsComplete();
-  const compareDone = plan.schools.filter(school => calculateScenarioForSchool(school).result?.ready).length >= 2;
+  // A complete plan is ready to review on Step 06. A second complete plan is
+  // optional and only unlocks the side-by-side delta.
+  const compareDone = plan.schools.some(school => calculateScenarioForSchool(school).result?.ready);
   const items = {
     profile:{done:profileDone,partial:false}, school:{done:schoolDone,partial:plan.schools.length>0&&!schoolDone},
     career:{done:careerDone,partial:plan.schools.some(s=>s.scenario?.startSalary!=null)&&!careerDone},
@@ -1057,7 +1059,9 @@ function renderScenarioReadiness(node, school, bundle, side) {
   if (!node) return;
   if (!school) {
     node.className = 'scenario-readiness scenario-readiness--empty';
-    node.innerHTML = '<span class="fl-mono">MODEL INCOMPLETE</span><strong>ADD A COLLEGE.</strong><small>Choose a college path before building this scenario.</small>';
+    node.innerHTML = side === 'b'
+      ? '<span class="fl-mono">SECOND MODEL OPTIONAL</span><strong>ADD ANOTHER COLLEGE TO COMPARE.</strong><small>Your completed plan is ready. Add a second path only when you want a side-by-side comparison.</small>'
+      : '<span class="fl-mono">MODEL INCOMPLETE</span><strong>ADD A COLLEGE.</strong><small>Choose a college path before building this scenario.</small>';
     return;
   }
   if (bundle.result?.ready) {
@@ -1131,9 +1135,13 @@ function renderCompare() {
       const leader = comparison.wealthLeader === 'tie' ? null : comparison.wealthLeader === 'left' ? a : b;
       verdict.className = 'scenario-verdict scenario-verdict--ready';
       verdict.innerHTML = `<span class="fl-mono">MODELED NET-WORTH GAP AT AGE ${targetAge}</span><strong>${leader ? `${escapeHtml(leader.name)} LEADS BY ${formatMoneyOrDash(Math.abs(comparison.netWorthDelta))}` : 'MODELED NET WORTH IS EVEN'}</strong><small>That gap comes only from the inputs in these two models. Cost, debt, salary and cash-flow tradeoffs can point in different directions; CollegeTab does not convert them into an overall school ranking.</small>`;
+    } else if (resultA?.ready || resultB?.ready) {
+      const readySchool = resultA?.ready ? a : b;
+      verdict.className = 'scenario-verdict scenario-verdict--ready';
+      verdict.innerHTML = `<span class="fl-mono">PLAN READY</span><strong>${escapeHtml(readySchool.name)} IS COMPLETE.</strong><small>Add or finish a second college model to unlock the long-range side-by-side difference. Your completed model does not need more input.</small>`;
     } else {
       verdict.className = 'scenario-verdict';
-      verdict.innerHTML = '<span class="fl-mono">SCENARIO SIGNAL</span><strong>COMPLETE BOTH MODELS TO SEE THE LONG-RANGE DIFFERENCE.</strong><small>CollegeTab does not label a school “better.” It shows which assumptions drive cost, debt, take-home pay and modeled net worth.</small>';
+      verdict.innerHTML = '<span class="fl-mono">SCENARIO SIGNAL</span><strong>COMPLETE ONE MODEL TO REVIEW YOUR PLAN.</strong><small>After the first model is ready, you can optionally add a second path for a side-by-side comparison.</small>';
     }
   }
 }
