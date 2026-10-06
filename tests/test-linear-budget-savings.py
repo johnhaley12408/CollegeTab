@@ -44,5 +44,8 @@ assert 'allocation401k' not in html
 assert 'contributionRates' in js and 'updateSavingsCapacityPreview' in js
 assert not soup.select_one('.savings-block.fl-surface--blue'), 'paper savings block must not inherit white text from blue surface'
 assert '.savings-block{background:var(--paper);color:var(--ink)' in css
+assert '.step-forward-band.fl-surface--blue{background:var(--paper);color:var(--ink)' in css
+assert '.step-forward-band.fl-surface--coral{background:var(--coral);color:var(--ink)' in css
+assert '.budget-inflation__intro' in css and 'color:#101010' in css
 assert '.budget-grid' in css and '.budget-inflation' in css and '.inflation-grid' in css and '.contribution-stage' in css
 print('PASS test-linear-budget-savings')
