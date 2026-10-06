@@ -30,6 +30,13 @@ for forbidden in ['socialSecurityRate: 0.062','standardDeduction: {','function f
     if forbidden in appjs: errors.append(f'financial math leaked into UI: {forbidden}')
 if 'CollegeTabLoanEngine' not in appjs: errors.append('UI does not consume dedicated loan engine')
 
+if "const compareDone = plan.schools.some(school => calculateScenarioForSchool(school).result?.ready);" not in appjs:
+    errors.append('one complete model must mark the review step complete')
+for required_copy in ['SECOND MODEL OPTIONAL', 'Your completed model does not need more input.', 'COMPLETE ONE MODEL TO REVIEW YOUR PLAN.']:
+    if required_copy not in appjs: errors.append(f'compare readiness copy missing: {required_copy}')
+if 'COMPLETE BOTH MODELS TO SEE THE LONG-RANGE DIFFERENCE.' in appjs:
+    errors.append('compare view still mislabels an optional second model as required setup')
+
 if 'data-rate-field="privateApr"' not in appjs: errors.append('year-specific private APR input missing from annual loan pricing table')
 if 'data-rate-field="privateFeeRate"' not in appjs: errors.append('year-specific private fee input missing from annual loan pricing table')
 for obsolete_private in ['name="privateApr"','name="privateOriginationFeeRate"']:

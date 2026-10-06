@@ -5,7 +5,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const VERSION = '2026.08.20-v1';
+  const VERSION = '2026.08.20-v2';
   const POLICY_2026 = Object.freeze({
     year: 2026,
     k401: Object.freeze({ base: 24500, catchup50: 8000, catchup60to63: 11250 }),
@@ -76,6 +76,51 @@
     return Object.freeze({ ready:true, allocations:Object.freeze(Object.fromEntries(Object.entries(out).map(([k,v])=>[k,cents(v)]))), spillToBrokerage:cents(spill) });
   }
 
+  function validateContributionRates(rates={}) {
+    const out = {};
+    for (const key of ['k401','hsa','roth','brokerage']) {
+      const value = Number(rates[key]);
+      if (!finite(value) || value < 0 || value > 100) return Object.freeze({ ready:false, error:`savings.${key}` });
+      out[key] = value;
+    }
+    return Object.freeze({ ready:true, rates:Object.freeze(out) });
+  }
+
+  function selectedContribution(maximum, rate) {
+    if (!finite(maximum) || maximum < 0 || !finite(rate) || rate < 0 || rate > 100) return null;
+    return cents(maximum * rate / 100);
+  }
+
+  function allocatePostTax({ amount, contributionRates, limits, eligibility={} }={}) {
+    if (!finite(amount) || amount < 0) return null;
+    const valid = validateContributionRates(contributionRates);
+    if (!valid.ready) return valid;
+    const allowed = {
+      hsa: eligibility.hsa === true,
+      roth: eligibility.roth !== false,
+      brokerage: true
+    };
+    const allocations = { hsa:0, roth:0, brokerage:0, cash:0 };
+    const maxima = { hsa:0, roth:0, brokerage:0, cash:0 };
+    let remaining = amount;
+    for (const key of ['hsa','roth','brokerage']) {
+      const legalLimit = allowed[key] ? (limits?.[key] ?? Infinity) : 0;
+      const maximum = Math.max(0, Math.min(remaining, legalLimit));
+      const selected = selectedContribution(maximum, valid.rates[key]);
+      maxima[key] = maximum;
+      allocations[key] = selected;
+      remaining = Math.max(0, remaining - selected);
+    }
+    maxima.cash = remaining;
+    allocations.cash = remaining;
+    return Object.freeze({
+      ready:true,
+      available:cents(amount),
+      allocations:Object.freeze(Object.fromEntries(Object.entries(allocations).map(([key,value])=>[key,cents(value)]))),
+      maxima:Object.freeze(Object.fromEntries(Object.entries(maxima).map(([key,value])=>[key,cents(value)])))
+    });
+  }
+
   function emergencyTarget({ monthlyEssentials, months }={}) {
     if (!finite(monthlyEssentials) || monthlyEssentials < 0 || !finite(months) || months < 0 || months > 24) return null;
     return cents(monthlyEssentials * months);
@@ -86,5 +131,5 @@
     return cents(balance * (1 + rate));
   }
 
-  return Object.freeze({ VERSION, POLICY_2026, accountLimits, validatePreferences, allocate, emergencyTarget, growBalance, cents });
+  return Object.freeze({ VERSION, POLICY_2026, accountLimits, validatePreferences, allocate, validateContributionRates, selectedContribution, allocatePostTax, emergencyTarget, growBalance, cents });
 });

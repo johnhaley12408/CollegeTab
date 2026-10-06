@@ -20,9 +20,11 @@ node "$ROOT/tests/test-cost-of-living.js"
 node "$ROOT/tests/test-savings-engine.js"
 node "$ROOT/tests/test-emergency-waterfall.js"
 python "$ROOT/tests/test-linear-budget-savings.py"
-node "$ROOT/scripts/build-ipeds-directory.mjs" --input "$ROOT/tests/ipeds-mini.csv" --survey-year 2025 --out "$ROOT/tests/ipeds-mini.json" >/dev/null
-node - <<NODE
-const fs=require('fs'),assert=require('assert'); const p=JSON.parse(fs.readFileSync('$ROOT/tests/ipeds-mini.json','utf8')); const byId=Object.fromEntries(p.institutions.map(x=>[x.unitId,x])); assert.strictEqual(p.institutionCount,2); assert.strictEqual(byId['100001'].canonicalId,'ipeds:100001'); assert.strictEqual(byId['100001'].identity.ownership,'Public'); assert.strictEqual(byId['100002'].identity.ownership,'Private nonprofit'); console.log('PASS test-ipeds-builder');
+IPEDSTEST_OUT="$(mktemp)"
+trap 'rm -f "$IPEDSTEST_OUT"' EXIT
+node "$ROOT/scripts/build-ipeds-directory.mjs" --input "$ROOT/tests/ipeds-mini.csv" --survey-year 2025 --out "$IPEDSTEST_OUT" >/dev/null
+IPEDSTEST_OUT="$IPEDSTEST_OUT" node - <<'NODE'
+const fs=require('fs'),assert=require('assert'); const p=JSON.parse(fs.readFileSync(process.env.IPEDSTEST_OUT,'utf8')); const byId=Object.fromEntries(p.institutions.map(x=>[x.unitId,x])); assert.strictEqual(p.institutionCount,2); assert.strictEqual(byId['100001'].canonicalId,'ipeds:100001'); assert.strictEqual(byId['100001'].identity.ownership,'Public'); assert.strictEqual(byId['100002'].identity.ownership,'Private nonprofit'); console.log('PASS test-ipeds-builder');
 NODE
 python "$ROOT/tests/static-audit.py"
 python "$ROOT/tests/test-scenario-ui.py"

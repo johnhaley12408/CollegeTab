@@ -14,7 +14,8 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (stateData, loanEngine, savingsEngine) {
   'use strict';
 
-  const ENGINE_VERSION = '2026.08.20-v5';
+  const ENGINE_VERSION = '2026.08.20-v7';
+  const EXPENSE_KEYS = Object.freeze(['housing','food','transportation','healthcare','entertainment','charity','misc']);
   const TAX_BASE_YEAR = 2026;
   const DAYS_PER_YEAR = 365.25;
 
@@ -400,8 +401,9 @@
     if (!['single','married_joint'].includes(input?.career?.filingStatus)) missing.push('career.filingStatus');
     requireRate('career.localIncomeTaxRate', input?.career?.localIncomeTaxRate ?? 0, 0, 0.25);
 
-    for (const key of ['housing','food','transportation','healthcare','entertainment','charity','misc']) {
+    for (const key of EXPENSE_KEYS) {
       requireMoney(`expenses.monthly.${key}`, input?.expenses?.monthly?.[key], { max: 100000 });
+      if (input?.expenses?.inflationRates?.[key] != null) requireRate(`expenses.inflationRates.${key}`, input.expenses.inflationRates[key], 0, 0.20);
     }
     requireRate('economy.inflationRate', input?.economy?.inflationRate, 0, 0.20);
 
@@ -415,10 +417,11 @@
       requireMoney(`wealth.${key}`, input?.wealth?.[key] ?? 0);
     }
     if (input?.wealth?.confirmed !== true) missing.push('savings.confirmed');
-    const prefCheck = savingsEngine?.validatePreferences?.(input?.wealth?.allocations || {});
-    if (!prefCheck?.ready) missing.push(prefCheck?.error || 'savings.allocationTotal');
-    if (input?.wealth?.allocations?.k401 > 0 && input?.wealth?.k401Available === false) missing.push('savings.k401Unavailable');
-    if (input?.wealth?.allocations?.hsa > 0 && input?.wealth?.hsaCoverage === 'none') missing.push('savings.hsaIneligible');
+    const contributionRates = resolvedContributionRates(input?.wealth);
+    const contributionCheck = savingsEngine?.validateContributionRates?.(contributionRates);
+    if (!contributionCheck?.ready) missing.push(contributionCheck?.error || 'savings.contributionRates');
+    if (contributionRates.k401 > 0 && input?.wealth?.k401Available === false) missing.push('savings.k401Unavailable');
+    if (contributionRates.hsa > 0 && input?.wealth?.hsaCoverage === 'none') missing.push('savings.hsaIneligible');
 
     if (!Number.isInteger(input?.ages?.graduationAge) || input.ages.graduationAge < 16 || input.ages.graduationAge > 80) missing.push('ages.graduationAge');
     if (!Number.isInteger(input?.ages?.targetAge) || input.ages.targetAge < 17 || input.ages.targetAge > 100) missing.push('ages.targetAge');
@@ -427,11 +430,39 @@
     return Object.freeze({ ready: missing.length === 0, missing: Object.freeze([...new Set(missing)]) });
   }
 
-  function monthlyExpenseSnapshot(monthly, inflationRate, yearIndex) {
-    const factor = Math.pow(1 + inflationRate, yearIndex);
+  function resolvedExpenseInflationRates(inflationRates, fallbackRate) {
     const out = {};
-    for (const key of ['housing','food','transportation','healthcare','entertainment','charity','misc']) out[key] = roundCents(monthly[key] * factor);
+    for (const key of EXPENSE_KEYS) out[key] = finite(inflationRates?.[key]) ? inflationRates[key] : fallbackRate;
     return Object.freeze(out);
+  }
+
+  function monthlyExpenseSnapshot(monthly, inflationRates, fallbackRate, yearIndex) {
+    const rates = resolvedExpenseInflationRates(inflationRates, fallbackRate);
+    const out = {};
+    for (const key of EXPENSE_KEYS) out[key] = roundCents(monthly[key] * Math.pow(1 + rates[key], yearIndex));
+    return Object.freeze(out);
+  }
+
+  function resolvedContributionRates(wealth={}) {
+    const current = wealth?.contributionRates && typeof wealth.contributionRates === 'object' ? wealth.contributionRates : null;
+    const legacy = wealth?.allocations && typeof wealth.allocations === 'object' ? wealth.allocations : {};
+    return Object.freeze(Object.fromEntries(['k401','hsa','roth','brokerage'].map(key => [key, Number(current?.[key] ?? legacy[key])])));
+  }
+
+  function affordablePretaxContribution({ legalLimit, grossWages, annualBudget, loanPayments, availableCash=0, taxAtContribution }={}) {
+    if (![legalLimit,grossWages,annualBudget,loanPayments,availableCash].every(finite) || legalLimit < 0 || grossWages < 0 || annualBudget < 0 || loanPayments < 0 || availableCash < 0 || typeof taxAtContribution !== 'function') return null;
+    const cap = Math.max(0, Math.min(legalLimit, grossWages));
+    const remaining = contribution => grossWages - contribution - taxAtContribution(contribution) - annualBudget - loanPayments + availableCash;
+    if (remaining(0) < 0 || cap === 0) return 0;
+    if (remaining(cap) >= 0) return roundCents(cap);
+    let low = 0, high = cap;
+    for (let i = 0; i < 64; i += 1) {
+      const mid = (low + high) / 2;
+      if (remaining(mid) >= 0) low = mid; else high = mid;
+    }
+    let result = Math.floor((low + Number.EPSILON) * 100) / 100;
+    while (result > 0 && remaining(result) < -0.005) result = roundCents(result - 0.01);
+    return roundCents(Math.max(0, result));
   }
 
   function studentLoanYear(loan, yearIndex) {
@@ -451,6 +482,8 @@
 
     const { college, financing, career, expenses, economy, wealth, ages } = input;
     const policyIndexRate = finite(input.taxPolicy?.indexRate) ? input.taxPolicy.indexRate : economy.inflationRate;
+    const expenseInflationRates = resolvedExpenseInflationRates(expenses.inflationRates, economy.inflationRate);
+    const contributionRates = resolvedContributionRates(wealth);
     const collegeFunding = projectCollegeFinancing({ ...college, loanApr: 0, interestAccruesInSchool: false, graceMonths: 0 });
     if (!collegeFunding) return Object.freeze({ ready: false, missing: Object.freeze(['college.financing']), fingerprint: fingerprint(input), engineVersion: ENGINE_VERSION });
     const annualFundingNeeds = collegeFunding.rows.map(row => Object.freeze({ academicYearIndex: row.academicYearIndex, calendarStartYear: row.calendarStartYear, netNeed: row.borrowedPrincipal }));
@@ -502,7 +535,7 @@
       const ageEnd = Math.min(ages.targetAge, ageStart + 1);
       const taxYear = firstWorkTaxYear + yearIndex;
       const salary = projectSalary({ startSalary: career.startSalary, annualGrowthRate: career.salaryGrowthRate, years: yearIndex });
-      const month = monthlyExpenseSnapshot(expenses.monthly, economy.inflationRate, yearIndex);
+      const month = monthlyExpenseSnapshot(expenses.monthly, expenseInflationRates, economy.inflationRate, yearIndex);
       const monthlyBudget = Object.values(month).reduce((sum, value) => sum + value, 0);
       const annualBudget = monthlyBudget * 12;
       const loanYear = studentLoanYear(loan, yearIndex);
@@ -528,30 +561,21 @@
         return { federal, state, fica, total: federal.tax + state.tax + fica.tax };
       };
 
-      let employee401 = 0;
-      let allocation = { ready: true, allocations: { k401:0,hsa:0,roth:0,brokerage:0,cash:0 }, spillToBrokerage: 0 };
-      let taxes = calcTaxes(0);
+      const legalLimitsAtZero = savingsEngine.accountLimits({ taxYear: Math.max(TAX_BASE_YEAR, taxYear), age: ageStart, filingStatus: career.filingStatus, magi: salary, hsaCoverage: wealth.hsaCoverage, policyIndexRate });
+      const affordable401Max = wealth.k401Available ? affordablePretaxContribution({
+        legalLimit: legalLimitsAtZero.k401,
+        grossWages: salary,
+        annualBudget,
+        loanPayments: loanYear.payments,
+        availableCash: emergencySweep,
+        taxAtContribution: contribution => calcTaxes(contribution).total
+      }) : 0;
+      let employee401 = savingsEngine.selectedContribution(affordable401Max || 0, contributionRates.k401) || 0;
+      let taxes = calcTaxes(employee401);
+      let allocation = { ready:true, available:0, allocations:{ hsa:0,roth:0,brokerage:0,cash:0 }, maxima:{ hsa:0,roth:0,brokerage:0,cash:0 } };
       let resourceBeforeDeficit = 0;
       let emergencyAdded = 0;
-
-      // 401(k) contributions change income tax, so solve the savings-allocation/tax interaction to a stable fixed point.
-      for (let i = 0; i < 24; i += 1) {
-        taxes = calcTaxes(employee401);
-        resourceBeforeDeficit = salary - taxes.total - annualBudget - loanYear.payments + emergencySweep;
-        const repayDeficit = Math.min(Math.max(0, resourceBeforeDeficit), cashDeficit);
-        const afterDeficit = Math.max(0, resourceBeforeDeficit - repayDeficit);
-        const reserveGap = Math.max(0, emergencyTarget - emergencyBalance);
-        const reserveAdd = Math.min(afterDeficit, reserveGap);
-        const allocPool = Math.max(0, afterDeficit - reserveAdd);
-        const limits = savingsEngine.accountLimits({ taxYear: Math.max(TAX_BASE_YEAR, taxYear), age: ageStart, filingStatus: career.filingStatus, magi: Math.max(0, salary - employee401), hsaCoverage: wealth.hsaCoverage, policyIndexRate });
-        allocation = savingsEngine.allocate({ amount: allocPool, preferences: wealth.allocations, limits, eligibility: { k401: wealth.k401Available, hsa: wealth.hsaCoverage !== 'none', roth: true } });
-        const next401 = allocation?.ready ? allocation.allocations.k401 : 0;
-        if (Math.abs(next401 - employee401) < 0.01) { employee401 = next401; break; }
-        employee401 = next401;
-      }
-
-      taxes = calcTaxes(employee401);
-      resourceBeforeDeficit = salary - taxes.total - annualBudget - loanYear.payments + emergencySweep;
+      resourceBeforeDeficit = salary - employee401 - taxes.total - annualBudget - loanYear.payments + emergencySweep;
       if (resourceBeforeDeficit >= 0) {
         const deficitPaid = Math.min(resourceBeforeDeficit, cashDeficit);
         cashDeficit -= deficitPaid;
@@ -560,10 +584,9 @@
         emergencyBalance += emergencyAdded;
         distributable -= emergencyAdded;
         const limits = savingsEngine.accountLimits({ taxYear: Math.max(TAX_BASE_YEAR, taxYear), age: ageStart, filingStatus: career.filingStatus, magi: Math.max(0, salary - employee401), hsaCoverage: wealth.hsaCoverage, policyIndexRate });
-        allocation = savingsEngine.allocate({ amount: Math.max(0, distributable), preferences: wealth.allocations, limits, eligibility: { k401: wealth.k401Available, hsa: wealth.hsaCoverage !== 'none', roth: true } });
-        employee401 = allocation.ready ? allocation.allocations.k401 : 0;
+        allocation = savingsEngine.allocatePostTax({ amount: Math.max(0, distributable), contributionRates, limits, eligibility: { hsa: wealth.hsaCoverage !== 'none', roth: true } });
       } else {
-        allocation = { ready: true, allocations: { k401:0,hsa:0,roth:0,brokerage:0,cash:0 }, spillToBrokerage: 0 };
+        allocation = { ready:true, available:0, allocations:{ hsa:0,roth:0,brokerage:0,cash:0 }, maxima:{ hsa:0,roth:0,brokerage:0,cash:0 } };
         employee401 = 0;
         taxes = calcTaxes(0);
         let need = -(salary - taxes.total - annualBudget - loanYear.payments + emergencySweep);
@@ -575,7 +598,8 @@
       }
 
       const retirement = retirementContribution({ grossWages: salary, employeeRate: salary > 0 ? employee401 / salary : 0, employerContributionRate: wealth.employerContributionRate, taxYear: Math.max(TAX_BASE_YEAR, taxYear), policyIndexRate });
-      const finalAlloc = allocation.allocations;
+      const finalAlloc = Object.freeze({ k401:roundCents(employee401), ...allocation.allocations });
+      const savingsMaxima = Object.freeze({ k401:roundCents(affordable401Max || 0), ...allocation.maxima });
       k401Balance += (finalAlloc.k401 + retirement.employer) * marketMidyearFactor;
       hsaBalance += finalAlloc.hsa * marketMidyearFactor;
       rothBalance += finalAlloc.roth * marketMidyearFactor;
@@ -590,9 +614,9 @@
         salary: roundCents(salary), employeeRetirement: roundCents(finalAlloc.k401), employerRetirement: retirement.employer,
         federalTax: taxes.federal.tax, stateTax: taxes.state.tax, ficaTax: taxes.fica.tax, takeHome: roundCents(spendableTakeHome),
         housing: roundCents(month.housing * 12), otherLiving: roundCents((monthlyBudget - month.housing) * 12), monthlyBudget: roundCents(monthlyBudget), monthlyExpenses: month,
-        loanPayments: roundCents(loanYear.payments), cashFlowAfterCoreExpenses: roundCents(salary - taxes.total - annualBudget - loanYear.payments),
+        loanPayments: roundCents(loanYear.payments), cashFlowAfterCoreExpenses: roundCents(salary - taxes.total - annualBudget - loanYear.payments), cashFlowAfter401kAndCore: roundCents(resourceBeforeDeficit),
         emergencyTarget: roundCents(emergencyTarget), emergencyAdded: roundCents(emergencyAdded), emergencyBalance: roundCents(emergencyBalance),
-        savingsAllocation: Object.freeze({ ...finalAlloc }), cashBalance: roundCents(cashBalance), k401Balance: roundCents(k401Balance), hsaBalance: roundCents(hsaBalance), rothBalance: roundCents(rothBalance), brokerageBalance: roundCents(brokerageBalance),
+        savingsAllocation: finalAlloc, savingsMaxima, postTaxSavingsAvailable: roundCents(allocation.available || 0), cashBalance: roundCents(cashBalance), k401Balance: roundCents(k401Balance), hsaBalance: roundCents(hsaBalance), rothBalance: roundCents(rothBalance), brokerageBalance: roundCents(brokerageBalance),
         retirementBalance: roundCents(retirementBalance), taxableInvestments: roundCents(brokerageBalance), cashDeficit: roundCents(cashDeficit), loanBalance: roundCents(loanYear.endingBalance), netWorth: roundCents(netWorth),
         taxDetail: Object.freeze({ federal: taxes.federal, state: taxes.state, fica: taxes.fica }), retirementDetail: retirement
       }));
@@ -617,9 +641,11 @@
         taxBaseYear: TAX_BASE_YEAR,
         futureTaxMethod: '2026 current law indexed by policyIndexRate',
         stateTaxQuality: 'planning-estimate; future state thresholds/deductions are indexed from the 2026 baseline, not predicted law',
-        expenseInflationMethod: 'each monthly budget category compounds annually by economy.inflationRate',
+        expenseInflationMethod: 'each monthly budget category compounds annually by its expenses.inflationRates value; economy.inflationRate is the legacy/general fallback',
+        expenseInflationRates,
         emergencyFundMethod: 'essential monthly expenses plus required student-loan payments, multiplied by selected reserve months; reserve HYSA is capped at that target and repriced annually',
-        savingsWaterfall: 'taxes + required loan payments + monthly budget, then emergency HYSA, then user-selected 401(k)/HSA/Roth/brokerage/cash allocations',
+        savingsWaterfall: 'employee 401(k) is selected first from its tax-aware affordable/legal maximum; taxes are recalculated; required loan payments and monthly budget are covered; emergency HYSA is filled; HSA, Roth, and brokerage sliders apply sequentially; cash/HYSA receives the remainder',
+        contributionSliderMethod: 'saved slider rates are percentages of each year-specific dynamic dollar maximum; the UI presents annual dollars, and future legal limits are projected by policyIndexRate',
         hsaTaxTreatment: 'HSA balance/limits are modeled; HSA payroll tax deduction effects are not yet credited, making take-home conservative when HSA allocations are used',
         investmentReturnTreatment: 'nominal pre-tax account growth; taxable brokerage tax drag not modeled',
         loanInterestMethod: 'dedicated loan-stack engine models subsidized, unsubsidized, private, and Parent PLUS tranches separately'
@@ -636,7 +662,8 @@
         annualLoanPayments: firstYear?.loanPayments ?? null,
         monthlyLoanPayment: loan.student.monthlyMinimum,
         monthlyBudget: firstYear?.monthlyBudget ?? null,
-        emergencyTarget: firstYear?.emergencyTarget ?? null
+        emergencyTarget: firstYear?.emergencyTarget ?? null,
+        savingsCapacity: firstYear ? Object.freeze({ maxima:firstYear.savingsMaxima, selected:firstYear.savingsAllocation, postTaxAvailable:firstYear.postTaxSavingsAvailable }) : null
       }),
       debtFreeAge: roundCents(debtFreeAge),
       targetAge: ages.targetAge,
@@ -669,10 +696,10 @@
   }
 
   return Object.freeze({
-    ENGINE_VERSION, TAX_BASE_YEAR, FEDERAL_2026, FICA_2026, RETIREMENT_2026,
+    ENGINE_VERSION, TAX_BASE_YEAR, FEDERAL_2026, FICA_2026, RETIREMENT_2026, EXPENSE_KEYS,
     progressiveTax, federalIncomeTax, ficaTax, stateIncomeTax, retirementContribution,
     grow, projectSalary, inflateExpense, emergencyFundTarget, calculateNetWorth, futureValueLumpSum, futureValueContributions, simpleInterest, dailySimpleInterest,
     monthlyPayment, repaymentSchedule, projectCollegeFinancing, opportunityCost,
-    scenarioCompleteness, projectScenario, compareScenarios, fingerprint, roundCents, roundDollars
+    scenarioCompleteness, resolvedExpenseInflationRates, monthlyExpenseSnapshot, resolvedContributionRates, affordablePretaxContribution, projectScenario, compareScenarios, fingerprint, roundCents, roundDollars
   });
 });

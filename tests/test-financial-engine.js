@@ -7,7 +7,7 @@ function near(actual, expected, tolerance = 0.02, label = '') {
   assert.ok(Math.abs(actual - expected) <= tolerance, `${label} expected ${expected}, got ${actual}`);
 }
 
-assert.strictEqual(Engine.ENGINE_VERSION, '2026.08.20-v5');
+assert.strictEqual(Engine.ENGINE_VERSION, '2026.08.20-v7');
 assert.strictEqual(Object.keys(StateData.STATES).length, 51, '50 states + DC expected');
 assert.strictEqual(Engine.progressiveTax(10000, [[null, 0.10]]), 0, 'null bracket thresholds must remain missing rather than coercing to zero');
 
@@ -97,6 +97,7 @@ near(Engine.projectSalary({ startSalary: 70000, annualGrowthRate: 0.03, years: 5
 near(Engine.inflateExpense({ annualExpense: 18000, inflationRate: 0.025, years: 5 }), 20365.35, 0.02, 'housing inflation');
 near(Engine.emergencyFundTarget({ annualCoreExpenses: 36000, months: 3 }), 9000, 0.01, 'emergency target');
 near(Engine.calculateNetWorth({ retirement: 50000, taxableInvestments: 20000, emergencySavings: 9000, cashDeficit: 1000, loanBalance: 15000 }), 63000, 0.01, 'net worth');
+near(Engine.affordablePretaxContribution({legalLimit:24500,grossWages:70000,annualBudget:50000,loanPayments:0,availableCash:0,taxAtContribution:amount=>10000-amount*.2}),12500,0.01,'tax-aware affordable 401k maximum');
 
 // Investment growth function.
 near(Engine.futureValueLumpSum(10000, 0.07, 10), 19671.51, 0.02, 'future value');
@@ -118,9 +119,12 @@ const baseScenario = {
     privateTerms: { termMonths: 120, graceMonths: 6, inSchoolPaymentMode: 'deferred', capitalizeAtRepayment: true }
   },
   career: { startSalary: 70000, salaryGrowthRate: 0.03, workState: 'TX', filingStatus: 'single', localIncomeTaxRate: 0 },
-  expenses: { monthly: { housing: 1500, food: 500, transportation: 400, healthcare: 250, entertainment: 150, charity: 50, misc: 150 } },
+  expenses: {
+    monthly: { housing: 1500, food: 500, transportation: 400, healthcare: 250, entertainment: 150, charity: 50, misc: 150 },
+    inflationRates: { housing: 0.032, food: 0.03, transportation: 0.029, healthcare: 0.027, entertainment: 0.026, charity: 0.025, misc: 0.025 }
+  },
   economy: { inflationRate: 0.025 },
-  wealth: { employerContributionRate: 0.03, investmentReturnRate: 0.07, emergencyMonths: 3, cashHysaRate: 0.035, k401Available: true, hsaCoverage: 'none', allocations: { k401: 50, hsa: 0, roth: 25, brokerage: 25, cash: 0 }, startingEmergencySavings: 0, startingCash: 0, starting401k: 0, startingHsa: 0, startingRoth: 0, startingBrokerage: 0, confirmed: true },
+  wealth: { employerContributionRate: 0.03, investmentReturnRate: 0.07, emergencyMonths: 3, cashHysaRate: 0.035, k401Available: true, hsaCoverage: 'none', contributionRates: { k401: 50, hsa: 0, roth: 25, brokerage: 25 }, startingEmergencySavings: 0, startingCash: 0, starting401k: 0, startingHsa: 0, startingRoth: 0, startingBrokerage: 0, confirmed: true },
   ages: { graduationAge: 22, targetAge: 40 },
   taxPolicy: { indexRate: 0.025 }
 };
@@ -138,17 +142,45 @@ assert.ok(result.firstYear.monthlyTakeHome > 0);
 assert.ok(result.firstYear.monthlyBudget > 0, 'monthly budget should be exposed');
 assert.ok(result.firstYear.emergencyTarget > 0, 'emergency target should be based on essential monthly obligations');
 assert.ok(result.timeline[0].emergencyBalance <= result.timeline[0].emergencyTarget + 0.01, 'emergency HYSA may not exceed target');
-const firstInvestmentYear = result.timeline.find(row => (row.savingsAllocation.k401 + row.savingsAllocation.hsa + row.savingsAllocation.roth + row.savingsAllocation.brokerage + row.savingsAllocation.cash) > 0.01);
-if (firstInvestmentYear) assert.ok(firstInvestmentYear.emergencyBalance >= firstInvestmentYear.emergencyTarget - 0.01, 'user-directed investing begins only after emergency target is full');
+assert.ok(result.firstYear.savingsCapacity.maxima.k401 > 0, '401k maximum should be calculated');
+near(result.firstYear.savingsCapacity.selected.k401,result.firstYear.savingsCapacity.maxima.k401*.5,0.02,'401k slider selects a share of tax-aware maximum');
+assert.ok(result.timeline[0].cashFlowAfter401kAndCore >= -0.01,'affordable 401k selection must preserve core cash flow');
+const no401Input=JSON.parse(JSON.stringify(baseScenario)); no401Input.wealth.contributionRates.k401=0;
+const no401Result=Engine.projectScenario(no401Input); assert.strictEqual(no401Result.ready,true);
+assert.ok(result.firstYear.federalTax < no401Result.firstYear.federalTax,'traditional 401k must reduce federal income tax before post-tax allocation');
+assert.strictEqual(result.firstYear.ficaTax,no401Result.firstYear.ficaTax,'traditional 401k does not reduce FICA wages');
+near(Object.values(result.firstYear.savingsCapacity.selected).reduce((a,b)=>a+b,0)-result.firstYear.savingsCapacity.selected.k401,result.firstYear.savingsCapacity.postTaxAvailable,0.03,'post-tax destinations preserve every available dollar');
+near(result.timeline[1].monthlyExpenses.housing, 1548, 0.01, 'sectional housing inflation');
+near(result.timeline[1].monthlyExpenses.food, 515, 0.01, 'sectional food inflation');
+near(result.timeline[1].monthlyExpenses.transportation, 411.6, 0.01, 'sectional transportation inflation');
+near(result.timeline[1].monthlyExpenses.healthcare, 256.75, 0.01, 'sectional healthcare inflation');
+assert.deepStrictEqual(result.assumptions.expenseInflationRates, baseScenario.expenses.inflationRates, 'resolved sectional rates must be auditable');
+const firstPostTaxSavingsYear = result.timeline.find(row => (row.savingsAllocation.hsa + row.savingsAllocation.roth + row.savingsAllocation.brokerage + row.savingsAllocation.cash) > 0.01);
+if (firstPostTaxSavingsYear) assert.ok(firstPostTaxSavingsYear.emergencyBalance >= firstPostTaxSavingsYear.emergencyTarget - 0.01, 'post-tax investing begins only after emergency target is full');
 assert.ok(result.targetNetWorth > 0);
 assert.ok(result.debtFreeAge > 22);
 assert.strictEqual(result.timeline.length, 18);
-assert.ok(/^CT-2026\.08\.20-v5-[A-F0-9]{8}$/.test(result.fingerprint));
+assert.ok(/^CT-2026\.08\.20-v7-[A-F0-9]{8}$/.test(result.fingerprint));
 assert.strictEqual(result.fingerprint, Engine.projectScenario(JSON.parse(JSON.stringify(baseScenario))).fingerprint, 'same inputs must reproduce same fingerprint');
 
 const changedInput = JSON.parse(JSON.stringify(baseScenario));
 changedInput.career.startSalary += 1;
 assert.notStrictEqual(result.fingerprint, Engine.projectScenario(changedInput).fingerprint);
+const changedSection = JSON.parse(JSON.stringify(baseScenario));
+changedSection.expenses.inflationRates.food += 0.001;
+assert.notStrictEqual(result.fingerprint, Engine.projectScenario(changedSection).fingerprint, 'sectional rate changes must change model fingerprint');
+const changed401 = JSON.parse(JSON.stringify(baseScenario)); changed401.wealth.contributionRates.k401 += 1;
+assert.notStrictEqual(result.fingerprint, Engine.projectScenario(changed401).fingerprint, '401k slider changes must change model fingerprint');
+
+const legacyInflationInput = JSON.parse(JSON.stringify(baseScenario));
+delete legacyInflationInput.expenses.inflationRates;
+const legacyInflationResult = Engine.projectScenario(legacyInflationInput);
+assert.strictEqual(legacyInflationResult.ready, true, 'legacy inputs use the general inflation fallback');
+near(legacyInflationResult.timeline[1].monthlyExpenses.housing, 1537.5, 0.01, 'legacy general-rate fallback');
+assert.ok(Object.values(legacyInflationResult.assumptions.expenseInflationRates).every(rate => rate === 0.025));
+const legacyAllocationInput=JSON.parse(JSON.stringify(baseScenario));
+legacyAllocationInput.wealth.allocations={...legacyAllocationInput.wealth.contributionRates,cash:0}; delete legacyAllocationInput.wealth.contributionRates;
+assert.strictEqual(Engine.projectScenario(legacyAllocationInput).ready,true,'legacy percentage allocation inputs remain readable');
 
 // Changing student loan mix must not change the modeled future value of family contributions.
 const lessSubsidized = JSON.parse(JSON.stringify(baseScenario));
@@ -171,6 +203,12 @@ invalidScenario.economy.inflationRate = 0.90;
 const invalidResult = Engine.projectScenario(invalidScenario);
 assert.strictEqual(invalidResult.ready, false);
 assert.ok(invalidResult.missing.includes('economy.inflationRate'));
+
+const invalidSection = JSON.parse(JSON.stringify(baseScenario));
+invalidSection.expenses.inflationRates.food = 0.90;
+const invalidSectionResult = Engine.projectScenario(invalidSection);
+assert.strictEqual(invalidSectionResult.ready, false);
+assert.ok(invalidSectionResult.missing.includes('expenses.inflationRates.food'));
 
 const cheaper = JSON.parse(JSON.stringify(baseScenario));
 cheaper.college.annualCost = 20000;

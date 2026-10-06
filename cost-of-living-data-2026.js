@@ -15,6 +15,25 @@
     retrieved: '2026-08-20'
   });
 
+  const INFLATION_SOURCE = Object.freeze({
+    asOf: '2026-07',
+    provider: 'U.S. Bureau of Labor Statistics',
+    dataset: 'Consumer Price Index — July 2026, 12-month percent change',
+    url: 'https://www.bls.gov/news.release/cpi.t01.htm',
+    method: 'Current category CPI changes are used as editable annual planning proxies, not forecasts. Transportation uses transportation services; healthcare uses medical care services; charity and miscellaneous use all items less food and energy as a general fallback.',
+    retrieved: '2026-08-20'
+  });
+
+  const INFLATION_RATES = Object.freeze({
+    housing: 3.2,
+    food: 3.0,
+    transportation: 2.9,
+    healthcare: 2.7,
+    entertainment: 2.6,
+    charity: 2.5,
+    misc: 2.5
+  });
+
   const CPI = Object.freeze({ annual2024: 313.689, q1_2026: (325.252 + 326.785 + 330.213) / 3 });
   const CPI_TO_Q1_2026 = CPI.q1_2026 / CPI.annual2024;
 
@@ -69,5 +88,9 @@
     return Object.freeze({ state: String(state).toUpperCase(), index, categories: Object.freeze(categories), monthlyTotal: Object.values(categories).reduce((a,b)=>a+b,0), source: SOURCE });
   }
 
-  return Object.freeze({ SOURCE, CPI, CPI_TO_Q1_2026, BASELINE_2024, INDEX: Object.freeze(RAW), monthlyPreset });
+  function inflationPreset() {
+    return Object.freeze({ rates: INFLATION_RATES, source: INFLATION_SOURCE });
+  }
+
+  return Object.freeze({ SOURCE, INFLATION_SOURCE, INFLATION_RATES, CPI, CPI_TO_Q1_2026, BASELINE_2024, INDEX: Object.freeze(RAW), monthlyPreset, inflationPreset });
 });
