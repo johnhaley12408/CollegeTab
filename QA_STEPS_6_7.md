@@ -2,7 +2,7 @@
 
 Current financial engine: `2026.08.20-v7`
 
-Current loan engine: `2026.08.19-loans-v4`
+Current loan engine: `2026.10.05-loans-v5`
 
 Review order is mandatory: **logic / sellability → aesthetic → functionality / accuracy**.
 
@@ -19,6 +19,10 @@ Review order is mandatory: **logic / sellability → aesthetic → functionality
 - Private-loan terms are supplied from the lender/user; CollegeTab does not invent a market-average private APR.
 - Private APR and origination fee are stored **per academic-year tranche**, so a Year 1 private loan can have different pricing from a Year 3 private loan.
 - If a private tranche exists, APR and fee must both be explicit; a true no-fee loan requires the user to enter `0%` rather than relying on a missing-value default.
+- The default interface asks only for dependency status, the source for any post-federal gap, and one private APR/fee pair when private borrowing is needed. CollegeTab generates the annual rows automatically.
+- Prior balances, repayment behavior, and year-by-year amount/rate controls remain available under one Advanced disclosure.
+- Automatically generated plans rebuild when college costs or simple assumptions change; legacy and explicitly customized annual rows remain fixed until the user changes them.
+- Paths with no borrowing requirement hide and unrequire private-loan pricing fields.
 
 ### Federal-loan logic
 

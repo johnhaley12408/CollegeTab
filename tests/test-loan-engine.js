@@ -5,7 +5,7 @@ function near(actual, expected, tolerance = 0.02, label = '') {
   assert.ok(Math.abs(actual - expected) <= tolerance, `${label}: expected ${expected}, got ${actual}`);
 }
 
-assert.strictEqual(Loan.LOAN_ENGINE_VERSION, '2026.08.19-loans-v4');
+assert.strictEqual(Loan.LOAN_ENGINE_VERSION, '2026.10.05-loans-v5');
 assert.strictEqual(Loan.FEDERAL_POLICY_2026.directUndergradApr, 0.0652);
 assert.strictEqual(Loan.FEDERAL_POLICY_2026.parentPlusApr, 0.0907);
 assert.deepStrictEqual(Loan.annualLimit('dependent', 1), { combined: 5500, subsidized: 3500 });
@@ -29,6 +29,54 @@ near(Loan.grossNeededForNet(5441.87, Loan.FEDERAL_POLICY_2026.directFeeRate), 55
 
 const directNet = Loan.netFromGross(5500, Loan.FEDERAL_POLICY_2026.directFeeRate);
 const need = directNet + 4500;
+const automaticPrivate = Loan.buildAutomaticLoanPlan({
+  annualFundingNeeds: [{ academicYearIndex: 1, calendarStartYear: 2026, netNeed: need }],
+  dependencyStatus: 'dependent',
+  remainingGapSource: 'private',
+  privateApr: 0.10,
+  privateFeeRate: 0.02
+});
+assert.strictEqual(automaticPrivate.length, 1);
+assert.strictEqual(automaticPrivate[0].unsubsidizedGross, 5500);
+assert.strictEqual(automaticPrivate[0].parentPlusGross, 0);
+near(Loan.netFromGross(automaticPrivate[0].privateGross, 0.02), 4500, 0.02, 'automatic private plan covers the net gap after its fee');
+assert.strictEqual(automaticPrivate[0].privateApr, 0.10);
+
+const automaticPlus = Loan.buildAutomaticLoanPlan({
+  annualFundingNeeds: [{ academicYearIndex: 1, calendarStartYear: 2026, netNeed: need }],
+  dependencyStatus: 'dependent',
+  remainingGapSource: 'parent_plus'
+});
+assert.strictEqual(automaticPlus[0].privateGross, 0);
+assert.ok(automaticPlus[0].parentPlusGross > 4500, 'Parent PLUS gross must cover its origination fee');
+near(Loan.netFromGross(automaticPlus[0].parentPlusGross, Loan.FEDERAL_POLICY_2026.parentPlusFeeRate), 4500, 0.02, 'automatic Parent PLUS plan covers the net gap');
+
+const largePlusNeed = directNet + 25000;
+const automaticPlusWithPrivateRemainder = Loan.buildAutomaticLoanPlan({
+  annualFundingNeeds: [{ academicYearIndex: 1, calendarStartYear: 2026, netNeed: largePlusNeed }],
+  dependencyStatus: 'dependent',
+  remainingGapSource: 'parent_plus',
+  privateApr: 0.10,
+  privateFeeRate: 0
+});
+assert.strictEqual(automaticPlusWithPrivateRemainder[0].parentPlusGross, Loan.FEDERAL_POLICY_2026.parentPlusAnnualLimit);
+assert.ok(automaticPlusWithPrivateRemainder[0].privateGross > 0, 'private borrowing should cover a remainder above the modeled Parent PLUS annual cap');
+const automaticPlusWithRemainderCheck = Loan.validateLoanPlan({
+  annualFundingNeeds: [{ academicYearIndex: 1, calendarStartYear: 2026, netNeed: largePlusNeed }],
+  dependencyStatus: 'dependent', priorFederalStudentPrincipal: 0, priorFederalSubsidizedPrincipal: 0, priorParentPlusPrincipal: 0,
+  annualLoans: automaticPlusWithPrivateRemainder,
+  privateTerms: { termMonths: 120, graceMonths: 6, inSchoolPaymentMode: 'deferred', capitalizeAtRepayment: true }
+});
+assert.strictEqual(automaticPlusWithRemainderCheck.ready, true, automaticPlusWithRemainderCheck.errors?.join(','));
+
+const automaticFederalOnly = Loan.buildAutomaticLoanPlan({
+  annualFundingNeeds: [{ academicYearIndex: 1, calendarStartYear: 2026, netNeed: need }],
+  dependencyStatus: 'dependent',
+  remainingGapSource: 'federal_only'
+});
+assert.strictEqual(automaticFederalOnly[0].parentPlusGross, 0);
+assert.strictEqual(automaticFederalOnly[0].privateGross, 0);
+
 const plan = Loan.projectEducationLoans({
   annualFundingNeeds: [{ academicYearIndex: 1, calendarStartYear: 2026, netNeed: need }],
   attendanceYears: 1,
