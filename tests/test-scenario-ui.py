@@ -26,6 +26,7 @@ app_pos=html.find('src="app.js"')
 if loan_pos>=0 and engine_pos>=0 and loan_pos>engine_pos: errors.append('loan engine must load before financial engine')
 if engine_pos>=0 and app_pos>=0 and engine_pos>app_pos: errors.append('financial engine must load before app.js')
 appjs=(root/'app.js').read_text()
+css=(root/'app.css').read_text()
 for forbidden in ['socialSecurityRate: 0.062','standardDeduction: {','function federalIncomeTax(','function repaymentSchedule(','Math.pow(1 + career.salaryGrowthRate']:
     if forbidden in appjs: errors.append(f'financial math leaked into UI: {forbidden}')
 if 'CollegeTabLoanEngine' not in appjs: errors.append('UI does not consume dedicated loan engine')
@@ -38,6 +39,9 @@ if "scenario.fundingPreference === 'custom' && Array.isArray(scenario.loanRows)"
     errors.append('guided plans must rebuild automatically while custom/legacy annual rows remain preserved')
 if "updateSimpleLoanControls(form, { borrowingRequired: false })" not in appjs:
     errors.append('private-loan fields must not remain required when the college path needs no borrowing')
+loan_head_rule=css.split('.loan-planner__head {',1)[1].split('}',1)[0] if '.loan-planner__head {' in css else ''
+if 'grid-template-columns: minmax(0,1fr);' not in loan_head_rule:
+    errors.append('financing heading and help copy must stack inside the half-width scenario panel')
 advanced=soup.find(id='loanAdvancedDetails')
 for advanced_id in ['loanPlanTable','loanRateTable','resetLoanPlanButton']:
     if not advanced or not advanced.find(id=advanced_id): errors.append(f'advanced loan control escaped disclosure: #{advanced_id}')
