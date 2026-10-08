@@ -16,6 +16,7 @@ for item in sorted(required-ids): errors.append(f'missing scenario UI #{item}')
 for obsolete in ['federalStudentTermYears','parentPlusTermYears','blendedLoanApr','loanApr']:
     if f'name="{obsolete}"' in html or f"name='{obsolete}'" in html: errors.append(f'obsolete loan UI field remains: {obsolete}')
 if 'TIERED STANDARD' not in html: errors.append('current-law Tiered Standard baseline must be visible in loan UI')
+if 'href="app.css?v=' not in html: errors.append('app stylesheet must be versioned so Pages updates are not hidden by a stale browser cache')
 if 'ANNUAL LOAN PRICING + FEE ASSUMPTIONS' not in html: errors.append('annual loan pricing/fee provenance controls missing')
 for script in ['state-tax-data-2026.js','loan-engine.js','financial-engine.js','app.js']:
     pos=html.find(f'src="{script}"')
