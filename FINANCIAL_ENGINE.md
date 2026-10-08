@@ -2,7 +2,7 @@
 
 Financial engine: `2026.08.20-v7`
 
-Loan engine: `2026.08.19-loans-v3`
+Loan engine: `2026.10.05-loans-v5`
 
 This document defines the standalone calculation engine and the core college-scenario comparison experience. Financial math lives in `financial-engine.js`; the interface in `app.js` only assembles inputs, calls the engine, and renders outputs.
 
@@ -57,7 +57,7 @@ CollegeTab no longer accepts or calculates a blended education-loan APR. Borrowi
 - Parent PLUS — parent debt
 - Private education loan — student debt in the current workflow
 
-Each academic-year row stores its own gross principal and pricing. Direct and Parent PLUS APR/fee assumptions are annual because federal award-year terms can change. **Private APR and private origination fee are also stored per academic-year tranche**, because separate private originations can carry different pricing. Private repayment term, post-school grace/deferment period, in-school payment behavior, and capitalization behavior are currently shared contract-planning assumptions for the scenario and remain user-editable.
+Each academic-year row stores its own gross principal and pricing. Direct and Parent PLUS APR/fee assumptions are annual because federal award-year terms can change. **Private APR and private origination fee are also stored per academic-year tranche**, because separate private originations can carry different pricing. The guided workflow asks for one private planning APR and fee and applies them to every automatically generated tranche. Per-year pricing remains available as an advanced override. Private repayment term, post-school grace/deferment period, in-school payment behavior, and capitalization behavior are shared contract-planning assumptions and remain user-editable in Advanced.
 
 Origination fees—federal or private when the lender charges one—are modeled as a reduction in proceeds, not a reduction in principal owed:
 
@@ -94,7 +94,7 @@ Independent undergraduates—and qualifying dependent undergraduates whose paren
 
 For academic years beginning on or after July 1, 2026, the standard Parent PLUS cap used by the model is $20,000 per academic year and $65,000 aggregate per child across all parent borrowers. Transitional/grandfathered exceptions are not silently assumed.
 
-The automatic financing suggestion is intentionally conservative: it never guesses that the student qualifies for subsidized principal. It first uses available Direct capacity as unsubsidized, and the user can reclassify eligible principal as subsidized only from an aid offer or explicit assumption. Parent PLUS is never auto-selected; private principal fills the remaining modeled gap until the user chooses a different financing mix.
+The guided workflow asks for dependency status and one preferred source for any remaining gap. It then generates every academic-year row automatically. The suggestion is intentionally conservative: it never guesses that the student qualifies for subsidized principal. It first uses available Direct capacity as unsubsidized, and the user can reclassify eligible principal as subsidized only from an aid offer or explicit assumption. Parent PLUS is used only when the user selects it; otherwise private principal fills the remaining modeled gap. Prior debt, repayment behavior, and annual amount/rate overrides remain in Advanced. Legacy saved annual rows are preserved as custom plans rather than silently rebuilt.
 
 ## 6. In-school and post-school interest by loan type
 

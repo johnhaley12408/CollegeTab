@@ -8,7 +8,7 @@ soup=BeautifulSoup(html,'html.parser')
 ids={x.get('id') for x in soup.find_all(attrs={'id':True})}
 required={
  'projectionSharedForm','projectionScenarioForm','projectionSchoolSelect','projectionOutput','projectionAuditBody',
- 'loanPlanTable','loanRateTable','resetLoanPlanButton','projectionFederalDebt','projectionPrivateDebt','projectionParentDebt','projectionLoanFees',
+ 'loanPlanTable','loanRateTable','resetLoanPlanButton','simpleLoanSummary','simplePrivateFields','loanAdvancedDetails','projectionFederalDebt','projectionPrivateDebt','projectionParentDebt','projectionLoanFees',
  'compareTotalCostA','compareDebtA','compareFederalDebtA','comparePrivateDebtA','compareParentDebtA','compareSalaryA','compareTakeHomeA','compareDebtFreeA','compareNetWorthA',
  'compareTotalCostB','compareDebtB','compareFederalDebtB','comparePrivateDebtB','compareParentDebtB','compareSalaryB','compareTakeHomeB','compareDebtFreeB','compareNetWorthB'
 }
@@ -29,6 +29,20 @@ appjs=(root/'app.js').read_text()
 for forbidden in ['socialSecurityRate: 0.062','standardDeduction: {','function federalIncomeTax(','function repaymentSchedule(','Math.pow(1 + career.salaryGrowthRate']:
     if forbidden in appjs: errors.append(f'financial math leaked into UI: {forbidden}')
 if 'CollegeTabLoanEngine' not in appjs: errors.append('UI does not consume dedicated loan engine')
+for guided_field in ['name="fundingPreference"','name="privateAprAssumption"','name="privateFeeRateAssumption"']:
+    if guided_field not in html: errors.append(f'guided loan input missing: {guided_field}')
+if 'PRIOR DEBT, REPAYMENT OPTIONS + YEAR-BY-YEAR OVERRIDES' not in html:
+    errors.append('complex loan inputs must remain behind the advanced disclosure')
+if 'buildAutomaticLoanPlan' not in appjs: errors.append('guided loan UI does not build the annual plan automatically')
+if "scenario.fundingPreference === 'custom' && Array.isArray(scenario.loanRows)" not in appjs:
+    errors.append('guided plans must rebuild automatically while custom/legacy annual rows remain preserved')
+if "updateSimpleLoanControls(form, { borrowingRequired: false })" not in appjs:
+    errors.append('private-loan fields must not remain required when the college path needs no borrowing')
+advanced=soup.find(id='loanAdvancedDetails')
+for advanced_id in ['loanPlanTable','loanRateTable','resetLoanPlanButton']:
+    if not advanced or not advanced.find(id=advanced_id): errors.append(f'advanced loan control escaped disclosure: #{advanced_id}')
+if advanced and advanced.find(attrs={'name':'fundingPreference'}): errors.append('basic funding choice must remain outside advanced controls')
+if 'Finish financing:' not in appjs: errors.append('incomplete financing must block forward navigation with a clear message')
 
 if "const compareDone = plan.schools.some(school => calculateScenarioForSchool(school).result?.ready);" not in appjs:
     errors.append('one complete model must mark the review step complete')

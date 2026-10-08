@@ -151,6 +151,10 @@ function normalizeScenario(raw) {
     privateApr: row.privateApr == null && row.privateGross > 0 && legacyPrivateApr != null ? legacyPrivateApr : row.privateApr,
     privateFeeRate: row.privateFeeRate == null && row.privateGross > 0 && legacyPrivateFeeRate != null ? legacyPrivateFeeRate : row.privateFeeRate
   }));
+  // Existing saved annual rows predate the guided workflow. Keep them as an
+  // explicit custom plan instead of silently rebuilding or reclassifying them.
+  const inferredFundingPreference = normalizedLoanRows.length ? 'custom' : 'private';
+  const firstPrivateRow = normalizedLoanRows.find(row => row.privateGross > 0.005);
   return {
     startSalary: nullableMoney(value.startSalary, 5000000),
     workState: /^[A-Z]{2}$/.test(String(value.workState || '').toUpperCase()) ? String(value.workState).toUpperCase() : '',
@@ -160,6 +164,9 @@ function normalizeScenario(raw) {
     priorFederalStudentPrincipal: nullableMoney(value.priorFederalStudentPrincipal, 1000000) ?? 0,
     priorFederalSubsidizedPrincipal: nullableMoney(value.priorFederalSubsidizedPrincipal, 1000000) ?? 0,
     priorParentPlusPrincipal: nullableMoney(value.priorParentPlusPrincipal, 1000000) ?? 0,
+    fundingPreference: ['private','parent_plus','federal_only','custom'].includes(value.fundingPreference) ? value.fundingPreference : inferredFundingPreference,
+    privateAprAssumption: nullableNumber(value.privateAprAssumption, 0, 100, 3) ?? legacyPrivateApr ?? firstPrivateRow?.privateApr ?? null,
+    privateFeeRateAssumption: nullableNumber(value.privateFeeRateAssumption, 0, 25, 3) ?? legacyPrivateFeeRate ?? firstPrivateRow?.privateFeeRate ?? null,
     privateTermYears: nullableNumber(value.privateTermYears, 1, 50, 0) ?? 10,
     privateGraceMonths: nullableNumber(value.privateGraceMonths, 0, 60, 0) ?? 6,
     privateInSchoolPaymentMode: ['deferred','interest_only'].includes(value.privateInSchoolPaymentMode) ? value.privateInSchoolPaymentMode : 'deferred',
@@ -879,12 +886,16 @@ function effectiveLoanRows(school, model) {
   const scenario = school?.scenario || normalizeScenario({});
   const needs = annualFundingNeedsForModel(model);
   if (!needs.length || !['dependent','independent','dependent_plus_denied'].includes(scenario.dependencyStatus)) return scenario.loanRows || [];
-  if (Array.isArray(scenario.loanRows) && scenario.loanRows.length === needs.length) return scenario.loanRows;
-  const suggested = window.CollegeTabLoanEngine?.suggestLoanPlan?.({
+  if (scenario.fundingPreference === 'custom' && Array.isArray(scenario.loanRows) && scenario.loanRows.length === needs.length) return scenario.loanRows;
+  const preference = scenario.fundingPreference === 'custom' ? 'private' : scenario.fundingPreference;
+  const suggested = window.CollegeTabLoanEngine?.buildAutomaticLoanPlan?.({
     annualFundingNeeds: needs,
     dependencyStatus: scenario.dependencyStatus,
     priorFederalStudentPrincipal: scenario.priorFederalStudentPrincipal || 0,
-    priorFederalSubsidizedPrincipal: scenario.priorFederalSubsidizedPrincipal || 0
+    priorFederalSubsidizedPrincipal: scenario.priorFederalSubsidizedPrincipal || 0,
+    remainingGapSource: preference,
+    privateApr: scenario.privateAprAssumption == null ? null : scenario.privateAprAssumption / 100,
+    privateFeeRate: scenario.privateFeeRateAssumption == null ? null : scenario.privateFeeRateAssumption / 100
   });
   return suggested ? suggested.map(row => ({
     ...row,
@@ -1046,13 +1057,15 @@ function scenarioMissingCopy(result, max = 5) {
     const yearMatch = String(key).match(/^loan\.year(\d+)\.(.+)$/);
     if (yearMatch) {
       const labels = { directAnnualLimit: 'federal Direct annual limit exceeded', subsidizedAnnualLimit: 'subsidized annual limit exceeded', parentPlusAnnualLimit: 'Parent PLUS annual limit exceeded', parentPlusIndependent: 'Parent PLUS used for an independent student', directApr: 'Direct Loan APR', directFeeRate: 'Direct Loan origination fee', parentPlusApr: 'Parent PLUS APR', parentPlusFeeRate: 'Parent PLUS origination fee', privateApr: 'private-loan APR', privateFeeRate: 'private-loan origination fee (enter 0 if none)', unfunded: 'unfunded college cost remains', overfunded: 'loan plan exceeds the funding need' };
+      if (['privateApr','privateFeeRate','unfunded'].includes(yearMatch[2])) return labels[yearMatch[2]];
       return `year ${yearMatch[1]}: ${labels[yearMatch[2]] || yearMatch[2]}`;
     }
     return key;
   });
-  if (!items.length) return 'Scenario inputs are incomplete.';
-  const visible = items.slice(0, max);
-  const remainder = items.length - visible.length;
+  const uniqueItems = [...new Set(items)];
+  if (!uniqueItems.length) return 'Scenario inputs are incomplete.';
+  const visible = uniqueItems.slice(0, max);
+  const remainder = uniqueItems.length - visible.length;
   return `${visible.join(' · ')}${remainder > 0 ? ` · +${remainder} more` : ''}`;
 }
 
@@ -1175,6 +1188,48 @@ function setFormElementValue(form, name, value) {
   input.value = value == null ? '' : String(value);
 }
 
+function updateSimpleLoanControls(form, { requiresPrivate = null, borrowingRequired = true } = {}) {
+  if (!form) return;
+  const dependency = form.elements.dependencyStatus?.value || '';
+  const preference = form.elements.fundingPreference?.value || 'private';
+  const parentPlusOption = form.elements.fundingPreference?.querySelector?.('option[value="parent_plus"]');
+  if (parentPlusOption) parentPlusOption.disabled = dependency !== 'dependent';
+  if (preference === 'parent_plus' && dependency !== 'dependent') form.elements.fundingPreference.value = 'private';
+  const activePreference = form.elements.fundingPreference?.value || 'private';
+  const showPrivate = borrowingRequired && (activePreference === 'private' || requiresPrivate === true);
+  const privateFields = $('#simplePrivateFields');
+  if (privateFields) privateFields.hidden = !showPrivate;
+  for (const name of ['privateAprAssumption','privateFeeRateAssumption']) {
+    const input = form.elements[name];
+    if (input) input.required = showPrivate;
+  }
+}
+
+function renderSimpleLoanSummary(node, { needs = [], rows = [], check = null, preference = 'private' } = {}) {
+  if (!node) return;
+  if (!needs.length) {
+    node.className = 'simple-loan-summary is-warn';
+    node.innerHTML = '<p><b>COST INPUTS NEEDED</b><small>Complete the college-cost step first so CollegeTab can build the annual financing plan.</small></p>';
+    return;
+  }
+  const totals = rows.reduce((sum, row) => ({
+    direct: sum.direct + (row.subsidizedGross || 0) + (row.unsubsidizedGross || 0),
+    parentPlus: sum.parentPlus + (row.parentPlusGross || 0),
+    private: sum.private + (row.privateGross || 0)
+  }), { direct: 0, parentPlus: 0, private: 0 });
+  const netNeed = needs.reduce((sum, row) => sum + (row.netNeed || 0), 0);
+  const missingPrivateTerms = totals.private > 0.005 && rows.some(row => row.privateGross > 0.005 && (row.privateApr == null || row.privateFeeRate == null));
+  const status = check?.ready
+    ? ['READY TO SAVE', 'CollegeTab built the annual borrowing plan automatically.']
+    : missingPrivateTerms
+      ? ['ONE DETAIL LEFT', 'Enter one estimated private-loan APR and fee above. CollegeTab will apply them across the generated annual tranches.']
+      : preference === 'federal_only'
+        ? ['GAP STILL OPEN', 'Federal Direct Loans do not cover the full cost. Choose Parent PLUS or private borrowing, or increase aid/family contribution.']
+        : ['REVIEW NEEDED', scenarioMissingCopy({ missing: check?.errors || [] }, 3)];
+  node.className = `simple-loan-summary${check?.ready ? ' is-ready' : ' is-warn'}`;
+  node.innerHTML = `<div><span class="fl-mono">TOTAL COST GAP</span><strong>${formatMoneyOrDash(netNeed)}</strong></div><div><span class="fl-mono">FEDERAL DIRECT</span><strong>${formatMoneyOrDash(totals.direct)}</strong></div><div><span class="fl-mono">PARENT PLUS</span><strong>${formatMoneyOrDash(totals.parentPlus)}</strong></div><div><span class="fl-mono">PRIVATE</span><strong>${formatMoneyOrDash(totals.private)}</strong></div><p><b>${escapeHtml(status[0])}</b><small>${escapeHtml(status[1])}</small></p>`;
+}
+
 function currentLoanRowsFromForm(form, fallbackRows = []) {
   const table = $('#loanPlanTable');
   if (!form || !table) return fallbackRows;
@@ -1209,6 +1264,18 @@ function currentLoanRowsFromForm(form, fallbackRows = []) {
   });
 }
 
+function loanRowsForEngine(rows = []) {
+  return rows.map(row => ({
+    ...row,
+    directApr: row.directApr / 100,
+    parentPlusApr: row.parentPlusApr / 100,
+    directFeeRate: row.directFeeRate / 100,
+    parentPlusFeeRate: row.parentPlusFeeRate / 100,
+    privateApr: row.privateApr == null ? null : row.privateApr / 100,
+    privateFeeRate: row.privateFeeRate == null ? null : row.privateFeeRate / 100
+  }));
+}
+
 function loanRowFundingStatus(row, need) {
   const Loan = window.CollegeTabLoanEngine;
   if (!Loan) return { delta: null, label: 'ENGINE UNAVAILABLE', className: 'is-warn' };
@@ -1228,28 +1295,34 @@ function renderLoanPlanner(school, { preserveDomRows = false } = {}) {
   const table = $('#loanPlanTable');
   const rateShell = $('#loanRateTable');
   const status = $('#loanPlanStatus');
+  const summary = $('#simpleLoanSummary');
   const form = $('#projectionScenarioForm');
   if (!table || !rateShell || !status || !form) return;
   if (!school) {
     table.innerHTML = '<p class="loan-plan-empty">Choose a college to build its financing stack.</p>';
     rateShell.innerHTML = '';
     status.textContent = '';
+    if (summary) summary.innerHTML = '';
     return;
   }
   const model = calculateSchoolModel(school);
   const needs = annualFundingNeedsForModel(model);
   const scenario = school.scenario || normalizeScenario({});
   if (!needs.length || model.borrowing == null) {
+    updateSimpleLoanControls(form, { borrowingRequired: false });
     table.innerHTML = '<p class="loan-plan-empty">Complete the college-cost workflow first. CollegeTab needs the annual funding gap before it can build loan tranches.</p>';
     rateShell.innerHTML = '';
     status.textContent = '';
+    renderSimpleLoanSummary(summary);
     return;
   }
   if (model.borrowing <= 0.01) {
+    updateSimpleLoanControls(form, { borrowingRequired: false });
     table.innerHTML = '<p class="loan-plan-empty">This college path has no modeled borrowing requirement after grants and family contribution. No loan assumptions are required.</p>';
     rateShell.innerHTML = '';
     status.className = 'loan-plan-status is-good';
     status.textContent = 'NO STUDENT OR PARENT BORROWING REQUIRED UNDER THE CURRENT COLLEGE-COST INPUTS.';
+    renderSimpleLoanSummary(summary, { needs, rows: [], check: { ready: true }, preference: form.elements.fundingPreference?.value || scenario.fundingPreference });
     return;
   }
   const dependency = form.elements.dependencyStatus?.value || scenario.dependencyStatus;
@@ -1258,13 +1331,19 @@ function renderLoanPlanner(school, { preserveDomRows = false } = {}) {
     rateShell.innerHTML = '';
     status.className = 'loan-plan-status is-warn';
     status.textContent = 'DEPENDENCY STATUS IS REQUIRED BECAUSE FEDERAL DIRECT LOAN LIMITS DIFFER.';
+    renderSimpleLoanSummary(summary, { needs, rows: [], preference: form.elements.fundingPreference?.value || scenario.fundingPreference });
     return;
   }
   const prior = nullableMoney(form.elements.priorFederalStudentPrincipal?.value, 1000000) ?? scenario.priorFederalStudentPrincipal ?? 0;
   const priorSubsidized = nullableMoney(form.elements.priorFederalSubsidizedPrincipal?.value, 1000000) ?? scenario.priorFederalSubsidizedPrincipal ?? 0;
   const priorParentPlus = nullableMoney(form.elements.priorParentPlusPrincipal?.value, 1000000) ?? scenario.priorParentPlusPrincipal ?? 0;
-  const fallbackRows = effectiveLoanRows({ ...school, scenario: { ...scenario, dependencyStatus: dependency, priorFederalStudentPrincipal: prior, priorFederalSubsidizedPrincipal: priorSubsidized, priorParentPlusPrincipal: priorParentPlus } }, model);
+  updateSimpleLoanControls(form);
+  const fundingPreference = form.elements.fundingPreference?.value || scenario.fundingPreference;
+  const privateAprAssumption = nullableNumber(form.elements.privateAprAssumption?.value, 0, 100, 3);
+  const privateFeeRateAssumption = nullableNumber(form.elements.privateFeeRateAssumption?.value, 0, 25, 3);
+  const fallbackRows = effectiveLoanRows({ ...school, scenario: { ...scenario, dependencyStatus: dependency, priorFederalStudentPrincipal: prior, priorFederalSubsidizedPrincipal: priorSubsidized, priorParentPlusPrincipal: priorParentPlus, fundingPreference, privateAprAssumption, privateFeeRateAssumption } }, model);
   const rows = preserveDomRows ? currentLoanRowsFromForm(form, fallbackRows) : fallbackRows;
+  updateSimpleLoanControls(form, { requiresPrivate: fundingPreference !== 'custom' && rows.some(row => row.privateGross > 0.005) });
   table.innerHTML = `
     <div class="loan-plan-row loan-plan-row--head"><span>Year</span><span>Net need</span><span>Direct subsidized</span><span>Direct unsubsidized</span><span>Parent PLUS</span><span>Private</span><span>Status</span></div>
     ${rows.map((row, index) => {
@@ -1295,15 +1374,7 @@ function renderLoanPlanner(school, { preserveDomRows = false } = {}) {
     </div>`).join('')}
   </div>`;
 
-  const loanInputRows = rows.map(row => ({
-    ...row,
-    directApr: row.directApr / 100,
-    parentPlusApr: row.parentPlusApr / 100,
-    directFeeRate: row.directFeeRate / 100,
-    parentPlusFeeRate: row.parentPlusFeeRate / 100,
-    privateApr: row.privateApr == null ? null : row.privateApr / 100,
-    privateFeeRate: row.privateFeeRate == null ? null : row.privateFeeRate / 100
-  }));
+  const loanInputRows = loanRowsForEngine(rows);
   const check = window.CollegeTabLoanEngine?.validateLoanPlan?.({
     annualFundingNeeds: needs,
     dependencyStatus: dependency,
@@ -1328,6 +1399,7 @@ function renderLoanPlanner(school, { preserveDomRows = false } = {}) {
     status.className = 'loan-plan-status is-warn';
     status.textContent = scenarioMissingCopy({ missing: check?.errors || [] }, 10).toUpperCase();
   }
+  renderSimpleLoanSummary(summary, { needs, rows, check, preference: fundingPreference });
 }
 
 function fillProjectionForms(school) {
@@ -1351,11 +1423,15 @@ function fillProjectionForms(school) {
     setFormElementValue(scenarioForm, 'priorFederalStudentPrincipal', scenario.priorFederalStudentPrincipal);
     setFormElementValue(scenarioForm, 'priorFederalSubsidizedPrincipal', scenario.priorFederalSubsidizedPrincipal);
     setFormElementValue(scenarioForm, 'priorParentPlusPrincipal', scenario.priorParentPlusPrincipal);
+    setFormElementValue(scenarioForm, 'fundingPreference', scenario.fundingPreference);
+    setFormElementValue(scenarioForm, 'privateAprAssumption', scenario.privateAprAssumption);
+    setFormElementValue(scenarioForm, 'privateFeeRateAssumption', scenario.privateFeeRateAssumption);
     setFormElementValue(scenarioForm, 'privateTermYears', scenario.privateTermYears);
     setFormElementValue(scenarioForm, 'privateGraceMonths', scenario.privateGraceMonths);
     setFormElementValue(scenarioForm, 'privateInSchoolPaymentMode', scenario.privateInSchoolPaymentMode);
     setFormElementValue(scenarioForm, 'privateCapitalizeAtRepayment', scenario.privateCapitalizeAtRepayment ? 'yes' : 'no');
     setFormElementValue(scenarioForm, 'extraMonthlyPayment', scenario.extraMonthlyPayment);
+    updateSimpleLoanControls(scenarioForm);
     renderLoanPlanner(school);
     const help = $('#projectionScenarioHelp');
     if (help) help.textContent = school
@@ -2060,7 +2136,7 @@ $('#projectionScenarioForm')?.addEventListener('submit', event => {
   const model = calculateSchoolModel(school);
   const fallbackRows = effectiveLoanRows(school, model);
   const loanRows = currentLoanRowsFromForm(form, fallbackRows);
-  school.scenario = normalizeScenario({
+  const nextScenario = normalizeScenario({
     ...school.scenario,
     startSalary: form.elements.startSalary.value,
     workState: form.elements.workState.value,
@@ -2069,6 +2145,9 @@ $('#projectionScenarioForm')?.addEventListener('submit', event => {
     priorFederalStudentPrincipal: form.elements.priorFederalStudentPrincipal.value,
     priorFederalSubsidizedPrincipal: form.elements.priorFederalSubsidizedPrincipal.value,
     priorParentPlusPrincipal: form.elements.priorParentPlusPrincipal.value,
+    fundingPreference: form.elements.fundingPreference.value,
+    privateAprAssumption: form.elements.privateAprAssumption.value,
+    privateFeeRateAssumption: form.elements.privateFeeRateAssumption.value,
     privateTermYears: form.elements.privateTermYears.value,
     privateGraceMonths: form.elements.privateGraceMonths.value,
     privateInSchoolPaymentMode: form.elements.privateInSchoolPaymentMode.value,
@@ -2076,6 +2155,28 @@ $('#projectionScenarioForm')?.addEventListener('submit', event => {
     extraMonthlyPayment: form.elements.extraMonthlyPayment.value,
     loanRows
   });
+  const loanCheck = window.CollegeTabLoanEngine?.validateLoanPlan?.({
+    annualFundingNeeds: annualFundingNeedsForModel(model),
+    dependencyStatus: nextScenario.dependencyStatus,
+    priorFederalStudentPrincipal: nextScenario.priorFederalStudentPrincipal,
+    priorFederalSubsidizedPrincipal: nextScenario.priorFederalSubsidizedPrincipal,
+    priorParentPlusPrincipal: nextScenario.priorParentPlusPrincipal,
+    annualLoans: loanRowsForEngine(nextScenario.loanRows),
+    privateTerms: {
+      termMonths: nextScenario.privateTermYears * 12,
+      graceMonths: nextScenario.privateGraceMonths,
+      inSchoolPaymentMode: nextScenario.privateInSchoolPaymentMode,
+      capitalizeAtRepayment: nextScenario.privateCapitalizeAtRepayment
+    }
+  });
+  if (!loanCheck?.ready) {
+    const advanced = $('#loanAdvancedDetails');
+    if (advanced && nextScenario.fundingPreference === 'custom') advanced.open = true;
+    renderLoanPlanner({ ...school, scenario: nextScenario }, { preserveDomRows: true });
+    showToast(`Finish financing: ${scenarioMissingCopy({ missing: loanCheck?.errors || [] }, 3)}.`);
+    return;
+  }
+  school.scenario = nextScenario;
   const saved = persistPlan({ archive: true });
   const bundle = calculateScenarioForSchool(plan.schools.find(item => item.id === projectionSchoolId));
   showToast(saved ? 'Career + loan assumptions saved.' : 'Career + loan assumptions updated for this session.');
@@ -2086,10 +2187,21 @@ $('#projectionScenarioForm')?.addEventListener('change', event => {
   const form = event.currentTarget;
   const school = plan.schools.find(item => item.id === projectionSchoolId);
   if (!school) return;
-  const loanNames = new Set(['dependencyStatus','priorFederalStudentPrincipal','priorFederalSubsidizedPrincipal','priorParentPlusPrincipal','privateTermYears','privateGraceMonths','privateInSchoolPaymentMode','privateCapitalizeAtRepayment']);
+  const loanNames = new Set(['dependencyStatus','fundingPreference','privateAprAssumption','privateFeeRateAssumption','priorFederalStudentPrincipal','priorFederalSubsidizedPrincipal','priorParentPlusPrincipal','privateTermYears','privateGraceMonths','privateInSchoolPaymentMode','privateCapitalizeAtRepayment']);
   if (!loanNames.has(event.target?.name)) return;
-  if (event.target.name === 'dependencyStatus') {
-    school.scenario = normalizeScenario({ ...school.scenario, dependencyStatus: form.elements.dependencyStatus.value, loanRows: [] });
+  const rebuildNames = new Set(['dependencyStatus','fundingPreference','privateAprAssumption','privateFeeRateAssumption']);
+  if (rebuildNames.has(event.target.name)) {
+    updateSimpleLoanControls(form);
+    school.scenario = normalizeScenario({
+      ...school.scenario,
+      dependencyStatus: form.elements.dependencyStatus.value,
+      fundingPreference: form.elements.fundingPreference.value,
+      privateAprAssumption: form.elements.privateAprAssumption.value,
+      privateFeeRateAssumption: form.elements.privateFeeRateAssumption.value,
+      loanRows: []
+    });
+    const advanced = $('#loanAdvancedDetails');
+    if (advanced && form.elements.fundingPreference.value === 'custom') advanced.open = true;
     renderLoanPlanner(school);
   } else {
     renderLoanPlanner(school, { preserveDomRows: true });
@@ -2111,15 +2223,21 @@ $('#resetLoanPlanButton')?.addEventListener('click', () => {
   const dependencyStatus = form.elements.dependencyStatus.value;
   if (!['dependent','independent','dependent_plus_denied'].includes(dependencyStatus)) { showToast('Choose federal dependency status first.'); return; }
   const model = calculateSchoolModel(school);
-  const suggested = window.CollegeTabLoanEngine?.suggestLoanPlan?.({
-    annualFundingNeeds: annualFundingNeedsForModel(model),
+  const draft = normalizeScenario({
+    ...school.scenario,
     dependencyStatus,
-    priorFederalStudentPrincipal: nullableMoney(form.elements.priorFederalStudentPrincipal.value, 1000000) ?? 0,
-    priorFederalSubsidizedPrincipal: nullableMoney(form.elements.priorFederalSubsidizedPrincipal.value, 1000000) ?? 0
-  }) || [];
-  school.scenario = normalizeScenario({ ...school.scenario, dependencyStatus, loanRows: suggested.map(row => ({ ...row, directApr: row.directApr * 100, parentPlusApr: row.parentPlusApr * 100, directFeeRate: row.directFeeRate * 100, parentPlusFeeRate: row.parentPlusFeeRate * 100 })) });
+    fundingPreference: form.elements.fundingPreference.value,
+    privateAprAssumption: form.elements.privateAprAssumption.value,
+    privateFeeRateAssumption: form.elements.privateFeeRateAssumption.value,
+    priorFederalStudentPrincipal: form.elements.priorFederalStudentPrincipal.value,
+    priorFederalSubsidizedPrincipal: form.elements.priorFederalSubsidizedPrincipal.value,
+    priorParentPlusPrincipal: form.elements.priorParentPlusPrincipal.value,
+    loanRows: []
+  });
+  const loanRows = effectiveLoanRows({ ...school, scenario: draft }, model);
+  school.scenario = normalizeScenario({ ...draft, loanRows });
   renderLoanPlanner(school);
-  showToast('Conservative federal-first loan plan restored. Subsidized eligibility remains $0 until you enter it.');
+  showToast('Automatic federal-first loan plan rebuilt.');
 });
 
 $('#editScenarioButton')?.addEventListener('click', () => {

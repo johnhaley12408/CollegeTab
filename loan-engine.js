@@ -5,7 +5,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
 
-  const LOAN_ENGINE_VERSION = '2026.08.19-loans-v4';
+  const LOAN_ENGINE_VERSION = '2026.10.05-loans-v5';
   const DAYS_PER_YEAR = 365.25;
   const CURRENT_AWARD_YEAR = '2026-27';
 
@@ -139,6 +139,44 @@
         method: 'conservative-federal-first: no subsidized eligibility assumed; federal Direct capacity is treated as unsubsidized until the user enters an aid offer'
       });
     });
+  }
+
+  function buildAutomaticLoanPlan({
+    annualFundingNeeds,
+    dependencyStatus,
+    priorFederalStudentPrincipal = 0,
+    priorFederalSubsidizedPrincipal = 0,
+    remainingGapSource = 'private',
+    privateApr = null,
+    privateFeeRate = null
+  }) {
+    if (!['private','parent_plus','federal_only'].includes(remainingGapSource)) return null;
+    const suggested = suggestLoanPlan({ annualFundingNeeds, dependencyStatus, priorFederalStudentPrincipal, priorFederalSubsidizedPrincipal });
+    if (!suggested) return null;
+    const hasPrivateTerms = validRate(privateApr, 1) && validRate(privateFeeRate, .25);
+    return Object.freeze(suggested.map(row => {
+      const remainingNetNeed = row.privateGross;
+      let parentPlusGross = 0;
+      let privateNetNeed = remainingGapSource === 'federal_only' ? 0 : remainingNetNeed;
+      if (remainingGapSource === 'parent_plus' && dependencyStatus === 'dependent') {
+        parentPlusGross = Math.min(
+          FEDERAL_POLICY_2026.parentPlusAnnualLimit,
+          grossNeededForNet(remainingNetNeed, row.parentPlusFeeRate) || 0
+        );
+        privateNetNeed = Math.max(0, remainingNetNeed - (netFromGross(parentPlusGross, row.parentPlusFeeRate) || 0));
+      }
+      const privateGross = privateNetNeed > 0 && hasPrivateTerms
+        ? (grossNeededForNet(privateNetNeed, privateFeeRate) || privateNetNeed)
+        : privateNetNeed;
+      return Object.freeze({
+        ...row,
+        parentPlusGross: cents(parentPlusGross),
+        privateGross: cents(privateGross),
+        privateApr: privateGross > 0 && hasPrivateTerms ? privateApr : null,
+        privateFeeRate: privateGross > 0 && hasPrivateTerms ? privateFeeRate : null,
+        method: `automatic-federal-first:${remainingGapSource}`
+      });
+    }));
   }
 
   function disbursementMonthsForAcademicYear(academicYearIndex) {
@@ -525,6 +563,7 @@
     netFromGross,
     grossNeededForNet,
     suggestLoanPlan,
+    buildAutomaticLoanPlan,
     validateLoanPlan,
     interestToGraduation,
     solveFixedPayment,

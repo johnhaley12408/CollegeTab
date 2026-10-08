@@ -460,10 +460,22 @@
             <section class="loan-planner" aria-labelledby="loanPlannerHeading">
               <div class="loan-planner__head">
                 <div><span class="fl-mono">03 / FINANCING STACK</span><h4 id="loanPlannerHeading">FEDERAL FIRST. PRIVATE ONLY FOR THE GAP.</h4></div>
-                <p>CollegeTab models every obligation separately. Direct Subsidized loans do not accrue interest while enrolled at least half-time or during the standard six-month grace period. Direct Unsubsidized and deferred private loans begin accruing from disbursement.</p>
+                <p>Choose the federal status and how you would cover any remaining gap. CollegeTab builds each academic year automatically; open Advanced only when you want to change the mix.</p>
               </div>
+              <div class="simple-loan-grid">
+                <label><span class="fl-label">1. Federal dependency status</span><select class="fl-select" name="dependencyStatus" required><option value="">Choose status</option><option value="dependent">Dependent undergraduate</option><option value="dependent_plus_denied">Dependent / parent unable to obtain PLUS</option><option value="independent">Independent undergraduate</option></select><small>This sets the annual federal Direct Loan limits automatically.</small></label>
+                <label><span class="fl-label">2. After federal loans, cover the rest with</span><select class="fl-select" name="fundingPreference" required><option value="private">Private student loan</option><option value="parent_plus">Parent PLUS — parent debt</option><option value="federal_only">Federal Direct only — leave a gap</option><option value="custom">Custom annual mix — advanced</option></select><small>CollegeTab calculates every academic year for you. Parent PLUS remains separate from the student's debt.</small></label>
+                <div class="simple-private-fields" id="simplePrivateFields">
+                  <label><span class="fl-label">3. Estimated private-loan APR</span><div class="suffix-input"><input class="fl-input" name="privateAprAssumption" type="number" min="0" max="100" step="0.01" placeholder="From lender quote"><span>%</span></div><small>Enter one planning rate; use Advanced only if annual tranches differ.</small></label>
+                  <label><span class="fl-label">Private origination fee</span><div class="suffix-input"><input class="fl-input" name="privateFeeRateAssumption" type="number" min="0" max="25" step="0.001" placeholder="Enter 0 if none"><span>%</span></div><small>Enter 0 when the lender charges no origination fee.</small></label>
+                </div>
+              </div>
+              <div class="simple-loan-summary" id="simpleLoanSummary" aria-live="polite"></div>
+
+              <details class="loan-advanced" id="loanAdvancedDetails">
+                <summary><span><span class="fl-mono">ADVANCED</span><strong>PRIOR DEBT, REPAYMENT OPTIONS + YEAR-BY-YEAR OVERRIDES</strong></span><span>OPEN ↓</span></summary>
+                <div class="loan-advanced__body">
               <div class="assumption-fields loan-core-fields">
-                <label><span class="fl-label">Federal dependency status</span><select class="fl-select" name="dependencyStatus"><option value="">Choose status</option><option value="dependent">Dependent undergraduate</option><option value="dependent_plus_denied">Dependent / parent unable to obtain PLUS</option><option value="independent">Independent undergraduate</option></select><small>Controls Direct Loan limits. The PLUS-denied option uses the additional unsubsidized eligibility available to qualifying dependent undergraduates; Parent PLUS is then unavailable in that scenario.</small></label>
                 <label><span class="fl-label">Prior federal student principal</span><input class="fl-input" name="priorFederalStudentPrincipal" type="number" min="0" max="1000000" step="100" value="0"><small>Used for federal aggregate-limit checks. If above $0, CollegeTab requires detailed existing-loan terms before producing a repayment projection rather than inventing a blended historical APR.</small></label>
                 <label><span class="fl-label">Of that, prior subsidized principal</span><input class="fl-input" name="priorFederalSubsidizedPrincipal" type="number" min="0" max="1000000" step="100" value="0"><small>Needed to enforce the separate undergraduate subsidized aggregate cap.</small></label>
                 <label><span class="fl-label">Prior Parent PLUS for this student</span><input class="fl-input" name="priorParentPlusPrincipal" type="number" min="0" max="1000000" step="100" value="0"><small>Used for the Parent PLUS aggregate limit. Prior parent debt is not projected without its actual loan terms.</small></label>
@@ -472,7 +484,7 @@
               </div>
 
               <div class="private-loan-band">
-                <div class="private-loan-band__title"><span class="fl-mono">PRIVATE REPAYMENT BEHAVIOR</span><strong>APR + ORIGINATION FEE ARE ENTERED FOR EACH ACADEMIC-YEAR TRANCHE BELOW.</strong></div>
+                <div class="private-loan-band__title"><span class="fl-mono">PRIVATE REPAYMENT BEHAVIOR</span><strong>THE SIMPLE RATE ABOVE APPLIES TO EVERY YEAR UNLESS YOU OVERRIDE A TRANCHE BELOW.</strong></div>
                 <div class="assumption-fields assumption-fields--private">
                   <label><span class="fl-label">Private repayment term</span><div class="suffix-input"><input class="fl-input" name="privateTermYears" type="number" min="1" max="50" step="1"><span>YR</span></div><small>Use the lender's actual contract term. Each academic year's APR and fee can differ.</small></label>
                   <label><span class="fl-label">Private grace / deferment after graduation</span><div class="suffix-input"><input class="fl-input" name="privateGraceMonths" type="number" min="0" max="60" step="1"><span>MO</span></div></label>
@@ -483,11 +495,13 @@
 
               <div class="loan-plan-toolbar">
                 <div><span class="fl-mono">ANNUAL BORROWING PLAN</span><strong>Gross amounts borrowed. Origination fees reduce what reaches the school.</strong></div>
-                <button class="fl-button fl-button--quiet" type="button" id="resetLoanPlanButton"><span>Use conservative federal-first plan</span><span class="fl-button__arrow">↻</span></button>
+                <button class="fl-button fl-button--quiet" type="button" id="resetLoanPlanButton"><span>Rebuild automatic plan</span><span class="fl-button__arrow">↻</span></button>
               </div>
               <div class="loan-plan-table-wrap"><div class="loan-plan-table" id="loanPlanTable"><p class="loan-plan-empty">Choose dependency status after completing the college-cost workflow.</p></div></div>
               <details class="loan-rate-details"><summary><span class="fl-mono">ANNUAL LOAN PRICING + FEE ASSUMPTIONS</span><strong>EDIT INPUTS →</strong></summary><div id="loanRateTable"></div><p>For 2026–27, undergraduate Direct Subsidized/Unsubsidized loans use a 6.52% fixed rate and Parent PLUS uses 9.07%. Current federal origination-fee inputs are 1.057% for Direct Subsidized/Unsubsidized and 4.228% for PLUS. Future federal award-year values remain editable planning proxies. Private APR and origination fee are entered separately for each academic-year tranche from the lender's actual terms; enter 0 explicitly when a private loan has no fee.</p></details>
               <div class="loan-plan-status" id="loanPlanStatus" aria-live="polite"></div>
+                </div>
+              </details>
             </section>
 
             <button class="fl-button fl-button--lime" type="submit"><span>Save + continue to monthly budget</span><span class="fl-button__arrow">→</span></button>
